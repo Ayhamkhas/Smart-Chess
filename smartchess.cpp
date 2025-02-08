@@ -23,16 +23,15 @@ BLACK     PAWNs             KNIGHTS             BISHOPS              ROOKS      
 1   0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0
  
     a b c d e f g h     a b c d e f g h     a b c d e f g h     a b c d e f g h     a b c d e f g h     a b c d e f g h
-
-
-
 */
+
+
 #include <iostream>
 using namespace std;
 
 /****************************\
 
-    BIT MANIPULATION
+        BIT MANIPULATION
 
 \****************************/
 
@@ -62,7 +61,7 @@ enum { white, black };
 
 /****************************\
 
-    INPUT/OUTPUT
+        INPUT/OUTPUT
 
 \****************************/
 
@@ -78,7 +77,7 @@ void print_bitboard(U64 bitboard)
         //loops over bitboard files 
         for(int file=0; file<8; file++)
         {
-            //convert file and rank into a specific square in the board
+            //convert file and rank into a specific square in the board 
             int square= rank*8 + file;
             if(!file)
             {
@@ -97,15 +96,84 @@ void print_bitboard(U64 bitboard)
 
 /****************************\
 
-    ATTACK TABLES
+        ATTACK TABLES
 
 \****************************/
+
+/*
+not_a_file is used to handle offboard pawn attacks on a file (a column)
+        
+          NOT_A_File
+
+8       0 1 1 1 1 1 1 1 
+7       0 1 1 1 1 1 1 1
+6       0 1 1 1 1 1 1 1
+5       0 1 1 1 1 1 1 1
+4       0 1 1 1 1 1 1 1
+3       0 1 1 1 1 1 1 1
+2       0 1 1 1 1 1 1 1
+1       0 1 1 1 1 1 1 1
+
+        a b c d e f g h
+
+not_h_file is used to handle offboard pawn attacks on h file (h column)
+
+            NOT_H_FILE
+8       1 1 1 1 1 1 1 0 
+7       1 1 1 1 1 1 1 0
+6       1 1 1 1 1 1 1 0
+5       1 1 1 1 1 1 1 0
+4       1 1 1 1 1 1 1 0
+3       1 1 1 1 1 1 1 0
+2       1 1 1 1 1 1 1 0
+1       1 1 1 1 1 1 1 0
+
+        a b c d e f g h
+
+not_h_file is used to handle offboard pawn attacks on hg files (hg columns)
+
+            NOT_HG_FILE
+8       1 1 1 1 1 1 0 0 
+7       1 1 1 1 1 1 0 0
+6       1 1 1 1 1 1 0 0
+5       1 1 1 1 1 1 0 0
+4       1 1 1 1 1 1 0 0
+3       1 1 1 1 1 1 0 0
+2       1 1 1 1 1 1 0 0
+1       1 1 1 1 1 1 0 0
+
+        a b c d e f g h
+
+           NOT_AB_FILE
+8       0 0 1 1 1 1 1 1 
+7       0 0 1 1 1 1 1 1
+6       0 0 1 1 1 1 1 1
+5       0 0 1 1 1 1 1 1
+4       0 0 1 1 1 1 1 1
+3       0 0 1 1 1 1 1 1
+2       0 0 1 1 1 1 1 1
+1       0 0 1 1 1 1 1 1
+
+        a b c d e f g h
+*/
+
+// not A file
+const U64 not_a_file= 18374403900871474942ULL;
+
+// not H file
+const U64 not_h_file=9187201950435737471ULL; 
+
+// not HG file
+const U64 not_hg_file=4557430888798830399ULL;
+
+// not AB file
+const U64 not_ab_file= 18229723555195321596ULL;
 
 U64 pawn_attacks[2][64]; // for 2 sides and for all squares on the board 
 
 //pawn attack generation
 
-U64 pawn_attack(int square, int side_tomove)
+U64 pawn_attack(int side_tomove, int square)
 {
     // result bitboard
     U64 attacks= 0ULL;
@@ -119,24 +187,38 @@ U64 pawn_attack(int square, int side_tomove)
     //for white side
     if(!side_tomove)
     {
-        attacks |= (bitboard >> 7); // when white pawns attack, the piece is shifted 7 squares ahead 
-    } 
+        if((bitboard >> 7) & not_a_file) attacks |= (bitboard >> 7); // when white pawns attack, the piece is shifted 7 or 9 squares ahead 
+        if((bitboard >> 9) & not_h_file) attacks |= (bitboard >> 9);
+    }   
 
     //for black side 
     else
     {
-        attacks |= (bitboard << 7);
+        if((bitboard << 7) & not_h_file) attacks |= (bitboard << 7); // when black pawns attack, the piece is shifted 7 or 9 squares backword 
+        if((bitboard << 9) & not_a_file) attacks |= (bitboard << 9);
     }
     
     return attacks;
+}
 
-
+//initialize leaper pieces attacks on the whole board 
+void init_leap_attacks()
+{
+    for(int square = 0; square < 64; square++)
+    {
+        pawn_attacks[white][square]= pawn_attack(white,square);
+        pawn_attacks[black][square]= pawn_attack(black,square); 
+    }
 }
 
 
 
 int main()
 {
-    print_bitboard(pawn_attack(b2,white));
+    init_leap_attacks();
+    for(int square=0; square<64; square++)
+    {
+        print_bitboard(pawn_attack(white,square));
+    }
     return 0;
 }
