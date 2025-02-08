@@ -1,16 +1,28 @@
 /* for board representation, bitboards will be used to represent the whole board. In total we need 12 bitboards (6 for white and 6 for black) as explained below
 
-WHITE     PAWNs             KNIGHTS         BISHOPS ROOKS QUEEN KING
-8   0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0
-7   0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0
-6   0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0
-5   0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0
-4   0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0
-3   0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0
-2   1 1 1 1 1 1 1 1     0 0 0 0 0 0 0 0
-1   0 0 0 0 0 0 0 0     0 1 0 0 0 0 1 0
+WHITE     PAWNs             KNIGHTS             BISHOPS              ROOKS               QUEEN               KING
+8   0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0
+7   0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0
+6   0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0
+5   0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0
+4   0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0
+3   0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0
+2   1 1 1 1 1 1 1 1     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0
+1   0 0 0 0 0 0 0 0     0 1 0 0 0 0 1 0     0 0 1 0 0 1 0 0     1 0 0 0 0 0 0 1     0 0 0 1 0 0 0 0     0 0 0 0 1 0 0 0
  
-    a b c d e f g h     a b c d e f g h
+    a b c d e f g h     a b c d e f g h     a b c d e f g h     a b c d e f g h     a b c d e f g h     a b c d e f g h
+
+BLACK     PAWNs             KNIGHTS             BISHOPS              ROOKS               QUEEN               KING
+8   0 0 0 0 0 0 0 0     0 1 0 0 0 0 1 0     0 0 1 0 0 1 0 0     1 0 0 0 0 0 0 1     0 0 0 1 0 0 0 0     0 0 0 0 1 0 0 0
+7   1 1 1 1 1 1 1 1     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0
+6   0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0
+5   0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0
+4   0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0
+3   0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0
+2   0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0
+1   0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0     0 0 0 0 0 0 0 0
+ 
+    a b c d e f g h     a b c d e f g h     a b c d e f g h     a b c d e f g h     a b c d e f g h     a b c d e f g h
 
 
 
@@ -18,10 +30,18 @@ WHITE     PAWNs             KNIGHTS         BISHOPS ROOKS QUEEN KING
 #include <iostream>
 using namespace std;
 
+/****************************\
+
+    BIT MANIPULATION
+
+\****************************/
+
 #define U64 unsigned long long // for bitbaord data type definition, it's a 64 bit unsigned integered represented in binary
 #define get_bit(bitboard,square) (bitboard & (1ULL << square)) // used to get the state of a bit in a sepcifc square (either empty or not)
 #define set_bit(bitboard, square) (bitboard |= (1ULL << square)) // set a specifc square on the board 
 #define remove_bit(bitboard, square) (get_bit(bitboard,square) ? bitboard ^= (1ULL << square) : 0) // remove a piece if it exists on a sepcific square on the board
+
+
 
 // board squares representation
 enum{
@@ -35,16 +55,22 @@ enum{
     a1, b1, c1, d1, e1, f1, g1, h1
 };
 
+//side to move 
+enum { white, black };
 
 
 
+/****************************\
 
+    INPUT/OUTPUT
+
+\****************************/
 
 /*function for printing the bitboard, takes a bitboard as an argument and prints it
 time complexity= O(1)
 space complexity= O(1)
 */
-void print_bitboard(U64 &bitboard)
+void print_bitboard(U64 bitboard)
 {
     // loops over ranks in the board from 1 to 8
     for (int rank=0; rank <8; rank++)
@@ -69,14 +95,48 @@ void print_bitboard(U64 &bitboard)
 }
 
 
+/****************************\
+
+    ATTACK TABLES
+
+\****************************/
+
+U64 pawn_attacks[2][64]; // for 2 sides and for all squares on the board 
+
+//pawn attack generation
+
+U64 pawn_attack(int square, int side_tomove)
+{
+    // result bitboard
+    U64 attacks= 0ULL;
+
+    //current bitboard
+    U64 bitboard = 0ULL;
+
+    set_bit(bitboard,square);
+    print_bitboard(bitboard);
+
+    //for white side
+    if(!side_tomove)
+    {
+        attacks |= (bitboard >> 7); // when white pawns attack, the piece is shifted 7 squares ahead 
+    } 
+
+    //for black side 
+    else
+    {
+        attacks |= (bitboard << 7);
+    }
+    
+    return attacks;
+
+
+}
+
+
 
 int main()
 {
-    U64 bitboard= 0ULL;
-    set_bit(bitboard, a7);
-    set_bit(bitboard, a8);
-    print_bitboard(bitboard);
-    remove_bit(bitboard, a7);
-    print_bitboard(bitboard);
+    print_bitboard(pawn_attack(b2,white));
     return 0;
 }
