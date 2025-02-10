@@ -101,7 +101,7 @@ void print_bitboard(U64 bitboard)
 \****************************/
 
 /*
-not_a_file is used to handle offboard pawn attacks on a file (a column)
+not_a_file is used to handle offboard attacks on a file (a column)
         
           NOT_A_File
 
@@ -116,7 +116,7 @@ not_a_file is used to handle offboard pawn attacks on a file (a column)
 
         a b c d e f g h
 
-not_h_file is used to handle offboard pawn attacks on h file (h column)
+not_h_file is used to handle offboard attacks on h file (h column)
 
             NOT_H_FILE
 8       1 1 1 1 1 1 1 0 
@@ -130,7 +130,7 @@ not_h_file is used to handle offboard pawn attacks on h file (h column)
 
         a b c d e f g h
 
-not_h_file is used to handle offboard pawn attacks on hg files (hg columns)
+not_h_file is used to handle offboard attacks on hg files (hg columns)
 
             NOT_HG_FILE
 8       1 1 1 1 1 1 0 0 
@@ -144,6 +144,7 @@ not_h_file is used to handle offboard pawn attacks on hg files (hg columns)
 
         a b c d e f g h
 
+not_ab_file is used to handle offboard attacks on ab files (ab columns)
            NOT_AB_FILE
 8       0 0 1 1 1 1 1 1 
 7       0 0 1 1 1 1 1 1
@@ -208,6 +209,7 @@ U64 pawn_attack(int side_tomove, int square)
     return attacks;
 }
 
+
 // generate knight attacks 
 U64 knight_attack(int square)
 {
@@ -229,10 +231,10 @@ U64 knight_attack(int square)
     if ((bitboard << 15) & not_h_file) attacks |= (bitboard << 15);
     if ((bitboard << 10) & not_ab_file) attacks |= (bitboard << 10);
     if ((bitboard << 6) & not_hg_file) attacks |= (bitboard << 6);
-    
-    
+      
     return attacks;
 }
+
 
 // generate king attacks 
 U64 king_attack(int square)
@@ -255,14 +257,38 @@ U64 king_attack(int square)
     if ((bitboard << 9) & not_a_file) attacks |= (bitboard << 9);
     if ((bitboard << 7) & not_h_file) attacks |= (bitboard << 7);   
     if ((bitboard << 1) & not_a_file) attacks |= (bitboard << 1);
-
-
-    // generate king attacks
-
-    
     
     return attacks;
+}
 
+// generate bishop attacks 
+U64 bishop_attack(int square)
+{
+    U64 result = 0ULL;
+
+    int r,f; // init rank and files variables 
+    int tr = square / 8; // target rank
+    int tf = square % 8; // target file 
+
+    // relevent bishop target bits 
+    for (r = tr+1, f = tf+1; r <=6 && f <=6; r++, f++)
+    {
+        result |= (1ULL <<(r*8 + f ));
+    }
+    for (r = tr-1, f = tf+1; r >=1 && f <=6; r--, f++)
+    {
+        result |= (1ULL <<(r*8 + f ));
+    }
+    for (r = tr+1, f = tf-1; r <=6 && f >=1 ; r++, f--)
+    {
+        result |= (1ULL <<(r*8 + f ));
+    }
+    for (r = tr-1, f = tf-1; r >=1 && f >=1 ; r--, f--)
+    {
+        result |= (1ULL <<(r*8 + f ));
+    }
+
+    return result;
 }
 
 //initialize leaper pieces attacks on the whole board 
@@ -289,7 +315,7 @@ int main()
     init_leap_attacks();
     for(int square=0; square<64; square++)
     {
-       print_bitboard(king_attack(square));
+       print_bitboard(bishop_attack(square));
     }
     return 0;
 }
