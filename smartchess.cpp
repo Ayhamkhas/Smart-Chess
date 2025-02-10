@@ -173,7 +173,10 @@ const U64 not_ab_file= 18229723555195321596ULL;
 U64 pawn_attacks[2][64]; // for 2 sides and for all squares on the board 
 
 // Knight attacks table 
-U64 knight_attacks[64];
+U64 knight_attacks[64]; // only consider square as there are no differences between white knight attacks and black side's ones 
+
+// King attacks table
+U64 king_attacks[64];
 
 //pawn attack generation
 
@@ -222,10 +225,40 @@ U64 knight_attack(int square)
     if ((bitboard >> 10) & not_hg_file) attacks |= (bitboard >> 10);
     if ((bitboard >> 6) & not_ab_file) attacks |= (bitboard >> 6);
 
-    if ((bitboard << 17) & not_a_file) attacks |= (bitboard << 17);  // the condition is to take care of knight offside attacks, if the knight is on a file it shouldnt go to h and the move should not be allowed 
+    if ((bitboard << 17) & not_a_file) attacks |= (bitboard << 17);  // same thing but for opposite direction 
     if ((bitboard << 15) & not_h_file) attacks |= (bitboard << 15);
     if ((bitboard << 10) & not_ab_file) attacks |= (bitboard << 10);
     if ((bitboard << 6) & not_hg_file) attacks |= (bitboard << 6);
+    
+    
+    return attacks;
+}
+
+// generate king attacks 
+U64 king_attack(int square)
+{
+    // result bitboard
+    U64 attacks= 0ULL;
+
+    //current bitboard
+    U64 bitboard = 0ULL;
+
+    set_bit(bitboard,square); 
+    
+    //generate king attacks/movements 
+    if (bitboard >> 8) attacks |= (bitboard >> 8);
+    if ((bitboard >> 9) & not_h_file) attacks |= (bitboard >> 9);
+    if ((bitboard >> 7) & not_a_file) attacks |= (bitboard >> 7);
+    if ((bitboard >> 1) & not_h_file) attacks |= (bitboard >> 1);
+
+    if (bitboard << 8) attacks |= (bitboard << 8);
+    if ((bitboard << 9) & not_a_file) attacks |= (bitboard << 9);
+    if ((bitboard << 7) & not_h_file) attacks |= (bitboard << 7);   
+    if ((bitboard << 1) & not_a_file) attacks |= (bitboard << 1);
+
+
+    // generate king attacks
+
     
     
     return attacks;
@@ -243,6 +276,9 @@ void init_leap_attacks()
 
         // init knight attacks 
         knight_attacks[square]= knight_attack(square);
+
+        // init king attacks
+        king_attacks[square]= king_attack(square);
     }
 }
 
@@ -253,7 +289,7 @@ int main()
     init_leap_attacks();
     for(int square=0; square<64; square++)
     {
-       print_bitboard(knight_attack(square));
+       print_bitboard(king_attack(square));
     }
     return 0;
 }
