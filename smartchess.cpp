@@ -27,7 +27,7 @@ BLACK     PAWNs             KNIGHTS             BISHOPS              ROOKS      
 
 
 #include <iostream>
-using namespace std;
+using namespace std; 
 
 /****************************\
 
@@ -169,7 +169,11 @@ const U64 not_hg_file=4557430888798830399ULL;
 // not AB file
 const U64 not_ab_file= 18229723555195321596ULL;
 
+// Pawn attacks table  [side][square]
 U64 pawn_attacks[2][64]; // for 2 sides and for all squares on the board 
+
+// Knight attacks table 
+U64 knight_attacks[64];
 
 //pawn attack generation
 
@@ -182,11 +186,11 @@ U64 pawn_attack(int side_tomove, int square)
     U64 bitboard = 0ULL;
 
     set_bit(bitboard,square);
-    print_bitboard(bitboard);
 
     //for white side
     if(!side_tomove)
-    {
+    {   
+        // generate pawn attacks
         if((bitboard >> 7) & not_a_file) attacks |= (bitboard >> 7); // when white pawns attack, the piece is shifted 7 or 9 squares ahead 
         if((bitboard >> 9) & not_h_file) attacks |= (bitboard >> 9);
     }   
@@ -201,13 +205,44 @@ U64 pawn_attack(int side_tomove, int square)
     return attacks;
 }
 
+// generate knight attacks 
+U64 knight_attack(int square)
+{
+    // result bitboard
+    U64 attacks= 0ULL;
+
+    //current bitboard
+    U64 bitboard = 0ULL;
+
+    set_bit(bitboard,square); 
+
+    // generate knight attacks
+    if ((bitboard >> 17) & not_h_file) attacks |= (bitboard >> 17);  // the condition is to take care of knight offside attacks, if the knight is on a file it shouldnt go to h and the move should not be allowed 
+    if ((bitboard >> 15) & not_a_file) attacks |= (bitboard >> 15);
+    if ((bitboard >> 10) & not_hg_file) attacks |= (bitboard >> 10);
+    if ((bitboard >> 6) & not_ab_file) attacks |= (bitboard >> 6);
+
+    if ((bitboard << 17) & not_a_file) attacks |= (bitboard << 17);  // the condition is to take care of knight offside attacks, if the knight is on a file it shouldnt go to h and the move should not be allowed 
+    if ((bitboard << 15) & not_h_file) attacks |= (bitboard << 15);
+    if ((bitboard << 10) & not_ab_file) attacks |= (bitboard << 10);
+    if ((bitboard << 6) & not_hg_file) attacks |= (bitboard << 6);
+    
+    
+    return attacks;
+
+}
+
 //initialize leaper pieces attacks on the whole board 
 void init_leap_attacks()
 {
     for(int square = 0; square < 64; square++)
     {
+        // init pawns attacks
         pawn_attacks[white][square]= pawn_attack(white,square);
         pawn_attacks[black][square]= pawn_attack(black,square); 
+
+        // init knight attacks 
+        knight_attacks[square]= knight_attack(square);
     }
 }
 
@@ -218,7 +253,7 @@ int main()
     init_leap_attacks();
     for(int square=0; square<64; square++)
     {
-        print_bitboard(pawn_attack(white,square));
+       print_bitboard(knight_attack(square));
     }
     return 0;
 }
