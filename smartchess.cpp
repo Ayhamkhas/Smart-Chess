@@ -40,6 +40,20 @@ using namespace std;
 #define set_bit(bitboard, square) (bitboard |= (1ULL << square)) // set a specifc square on the board 
 #define remove_bit(bitboard, square) (get_bit(bitboard,square) ? bitboard ^= (1ULL << square) : 0) // remove a piece if it exists on a sepcific square on the board
 
+// count bits on a bitboard (will be used to calculate pieces on a board)
+static inline int count_bits(U64 bitboard)
+{
+    int bit_counter = 0;
+    
+    while(bitboard)
+    {
+        bit_counter++;
+        bitboard &= bitboard -1;
+    }
+
+    return bit_counter;
+} 
+
 
 
 // board squares representation
@@ -180,7 +194,6 @@ U64 knight_attacks[64]; // only consider square as there are no differences betw
 U64 king_attacks[64];
 
 //pawn attack generation
-
 U64 pawn_attack(int side_tomove, int square)
 {
     // result bitboard
@@ -261,7 +274,7 @@ U64 king_attack(int square)
     return attacks;
 }
 
-// generate bishop attacks 
+// generate bishop attacks on an empty board
 U64 bishop_attack(int square)
 {
     U64 result = 0ULL;
@@ -291,6 +304,103 @@ U64 bishop_attack(int square)
     return result;
 }
 
+// to take care of on fly attacks with blokcing pieces on the way
+U64 bishop_attack_flying(int square, U64 block)
+{
+    U64 result = 0ULL;
+
+    int r,f; // init rank and files variables 
+    int tr = square / 8; // target rank
+    int tf = square % 8; // target file 
+
+    // generate bishop attacks 
+    for (r = tr+1, f = tf+1; r <=7 && f <=7; r++, f++)
+    {
+        result |= (1ULL << (r*8 + f ));
+        if((1ULL <<(r*8 + f )) & block) break;
+    }
+    for (r = tr-1, f = tf+1; r >=0 && f <=7; r--, f++)
+    {
+        result |= (1ULL <<(r*8 + f ));
+        if((1ULL <<(r*8 + f )) & block) break;
+    }
+    for (r = tr+1, f = tf-1; r <=7 && f >=0 ; r++, f--)
+    {
+        result |= (1ULL <<(r*8 + f ));
+        if((1ULL <<(r*8 + f )) & block) break;
+
+    }
+    for (r = tr-1, f = tf-1; r >=0 && f >=0 ; r--, f--)
+    {
+        result |= (1ULL <<(r*8 + f ));
+        if( (1ULL <<(r*8 + f )) & block) break;
+    }
+
+    return result;
+}
+
+// generate rook attacks
+U64 rook_attack(int square)
+{
+    U64 result = 0ULL;
+
+    int r,f; // init rank and files variables 
+    int tr = square / 8; // target rank
+    int tf = square % 8; // target file 
+
+    // relevent rook target bits 
+    for (r= tr+1; r<= 6; r++)
+    {
+        result|= (1ULL << (r*8 +tf));
+    }
+    for (r= tr-1; r>=1; r--)
+    {
+        result|= (1ULL << (r*8 +tf));
+    }
+    for (f= tf+1; f<=6; f++)
+    {
+        result|= (1ULL << (tr*8 +f));
+    }
+    for (f= tf-1; f>=1; f--)
+    {
+        result|= (1ULL << (tr*8 +f));
+    }
+
+    return result;
+}
+
+U64 rook_attack_flying(int square, U64 block)
+{
+    U64 result = 0ULL;
+
+    int r,f; // init rank and files variables 
+    int tr = square / 8; // target rank
+    int tf = square % 8; // target file 
+
+    // relevent rook target bits on fly with blocking pieces
+    for (r= tr+1; r<= 7; r++)
+    {
+        result|= (1ULL << (r*8 +tf));
+        if ((1ULL << (r*8 +tf)) & block) break;
+    }
+    for (r= tr-1; r>=0; r--)
+    {
+        result|= (1ULL << (r*8 +tf));
+        if ((1ULL << (r*8 +tf)) & block) break;
+    }
+    for (f= tf+1; f<=7; f++)
+    {
+        result|= (1ULL << (tr*8 +f));
+        if ((1ULL << (tr*8 +f)) & block) break;
+    }
+    for (f= tf-1; f>=0; f--)
+    {
+        result|= (1ULL << (tr*8 +f));
+        if ((1ULL << (tr*8 +f)) & block) break;
+    }
+
+    return result;
+}
 //initialize leaper pieces attacks on the whole board 
 void init_leap_attacks()
 {
@@ -313,9 +423,16 @@ void init_leap_attacks()
 int main()
 {
     init_leap_attacks();
-    for(int square=0; square<64; square++)
-    {
-       print_bitboard(bishop_attack(square));
-    }
+    //for(int square=0; square<64; square++)
+    //{
+    //   print_bitboard(rook_attack(square));
+    //}
+    U64 block = 0ULL;
+    set_bit(block,d2);
+    set_bit(block,h4);
+    set_bit(block,e4);
+    set_bit(block,g7);
+    print_bitboard(block);
+    cout<< "number of bits: "<< count_bits(block);
     return 0;
 }
