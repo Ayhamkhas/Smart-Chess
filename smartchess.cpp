@@ -65,6 +65,44 @@ static inline int get_least_bit(U64 bitboard)
     else return -1;
 }
 
+/****************************\
+
+RADNOM MAGIC NUMBER CANDIDATES
+
+\****************************/
+//pseudo random number state generated randomly to be used in magic bitboards implementations
+unsigned int state = 1804289383;
+
+// generate 32-bit pseudo legal numbers 
+unsigned int get_random_number_32()
+{
+    unsigned int number = state;
+
+    //XOR shift algorithm
+    number ^= number << 13;
+    number ^= number >> 17;
+    number ^= number << 5;
+
+    //update state 
+    state = number ;
+
+    return state;
+}
+U64 get_random_number_64(){
+    
+    U64 n1, n2, n3, n4;
+
+    n1 = (U64)(get_random_number_32() & 0xFFFF);
+    n2 = (U64)(get_random_number_32() & 0xFFFF);
+    n3 = (U64)(get_random_number_32() & 0xFFFF);
+    n4 = (U64)(get_random_number_32() & 0xFFFF);
+
+    return n1 | (n2 << 16) | (n3 << 32) | (n4 << 48);
+}
+// generate magic number candidate
+U64 generate_magic_number(){
+    return get_random_number_64() & get_random_number_64() & get_random_number_64();
+}
 
 
 // board squares representation
@@ -491,17 +529,28 @@ U64 set_occupancy(int index, int bits_in_mask, U64 attack_mask)
 }
 
 
+
 int main()
 {
     init_leap_attacks();
+    //for (int rank=0 ; rank <8 ; rank++)
+    //{
+    //    for(int file =0 ; file <8 ; file ++)
+    //    {
+    //        int square = rank * 8 + file;
+    //        print_bitboard(knight_attack(square));
+    //    }
+    //}
     for (int rank=0 ; rank <8 ; rank++)
     {
         for(int file =0 ; file <8 ; file ++)
         {
             int square = rank * 8 + file;
-            cout << count_bits(mask_rook_attack(square)) << ", ";
+            cout <<" ," << count_bits(mask_rook_attack(square));
         }
-        cout<< "\n";
+        cout <<endl;
     }
+    
+    //print_bitboard(generate_magic_number());
     return 0;
 }
