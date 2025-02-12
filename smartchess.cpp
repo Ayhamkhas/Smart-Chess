@@ -206,6 +206,30 @@ const U64 not_hg_file=4557430888798830399ULL;
 // not AB file
 const U64 not_ab_file= 18229723555195321596ULL;
 
+//  bishop relevant occupany for every square on the board 
+const int bishop_relavant_bit[64] = {
+    6, 5, 5, 5, 5, 5, 5, 6, 
+    5, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 7, 7, 7, 7, 5, 5,
+    5, 5, 7, 9, 9, 7, 5, 5,
+    5, 5, 7, 9, 9, 7, 5, 5,
+    5, 5, 7, 7, 7, 7, 5, 5,
+    5, 5, 5, 5, 5, 5, 5, 5,
+    6, 5, 5, 5, 5, 5, 5, 6 
+};
+
+//  rook relevant occupany for every square on the board
+const int rook_relevant_bit[64] = {
+    12, 11, 11, 11, 11, 11, 11, 12, 
+    11, 10, 10, 10, 10, 10, 10, 11,
+    11, 10, 10, 10, 10, 10, 10, 11,
+    11, 10, 10, 10, 10, 10, 10, 11,
+    11, 10, 10, 10, 10, 10, 10, 11,
+    11, 10, 10, 10, 10, 10, 10, 11,
+    11, 10, 10, 10, 10, 10, 10, 11,
+    12, 11, 11, 11, 11, 11, 11, 12
+};
+
 // Pawn attacks table  [side][square]
 U64 pawn_attacks[2][64]; // for 2 sides and for all squares on the board 
 
@@ -297,7 +321,7 @@ U64 king_attack(int square)
 }
 
 // generate bishop attacks on an empty board
-U64 bishop_attack(int square)
+U64 mask_bishop_attack(int square)
 {
     U64 result = 0ULL;
 
@@ -362,7 +386,7 @@ U64 bishop_attack_flying(int square, U64 block)
 }
 
 // generate rook attacks
-U64 rook_attack(int square)
+U64 mask_rook_attack(int square)
 {
     U64 result = 0ULL;
 
@@ -391,6 +415,7 @@ U64 rook_attack(int square)
     return result;
 }
 
+// rook attacks with blockers
 U64 rook_attack_flying(int square, U64 block)
 {
     U64 result = 0ULL;
@@ -440,21 +465,43 @@ void init_leap_attacks()
     }
 }
 
+// set occupancies within an attack on a board
+U64 set_occupancy(int index, int bits_in_mask, U64 attack_mask)
+{
+    //occupancy board 
+    U64 occupancy = 0ULL;
+
+    //loop all over the bits within attack range
+    for (int count =0 ; count< bits_in_mask; count++)
+    {
+        // get least significant bit 
+        int square = get_least_bit(attack_mask);
+
+        //remove the least signifcant bit 
+        remove_bit(attack_mask, square);
+
+        // make sure that the occupancy is on board 
+        if(index & (1 << count))
+        {
+            occupancy |= (1ULL << square);
+        }
+    }
+
+    return occupancy;
+}
 
 
 int main()
 {
     init_leap_attacks();
-    //for(int square=0; square<64; square++)
-    //{
-    //   print_bitboard(rook_attack(square));
-    //}
-    U64 block = 0ULL;
-    set_bit(block,d2);
-    set_bit(block,h4);
-    set_bit(block,e4);
-    print_bitboard(block);
-    cout<< "number of bits: "<< count_bits(block);
-    cout << " index: " << get_least_bit(block) << " coordinates: "<< coordinates[get_least_bit(block)];
+    for (int rank=0 ; rank <8 ; rank++)
+    {
+        for(int file =0 ; file <8 ; file ++)
+        {
+            int square = rank * 8 + file;
+            cout << count_bits(mask_rook_attack(square)) << ", ";
+        }
+        cout<< "\n";
+    }
     return 0;
 }
