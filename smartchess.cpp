@@ -42,6 +42,68 @@ using namespace std;
 #define set_bit(bitboard, square) (bitboard |= (1ULL << square)) // set a specifc square on the board 
 #define remove_bit(bitboard, square) (get_bit(bitboard,square) ? bitboard ^= (1ULL << square) : 0) // remove a piece if it exists on a sepcific square on the board
 
+//side to move 
+enum { white, black, both };
+
+// for magic bitboards for sliding pieces
+enum {bishop, rook};
+
+// enum for caslting sides
+enum {wk = 1, wq = 2 , bk = 4 , bq = 8};
+
+// enum pieces
+enum {P, N, B, R, K , Q, p, n, b, r, k, q};
+
+// board squares representation
+enum{
+    a8, b8, c8, d8, e8, f8, g8, h8,
+    a7, b7, c7, d7, e7, f7, g7, h7,
+    a6, b6, c6, d6, e6, f6, g6, h6,
+    a5, b5, c5, d5, e5, f5, g5, h5,
+    a4, b4, c4, d4, e4, f4, g4, h4,
+    a3, b3, c3, d3, e3, f3, g3, h3,
+    a2, b2, c2, d2, e2, f2, g2, h2,
+    a1, b1, c1, d1, e1, f1, g1, h1, no_sq
+};
+
+const char *coordinates [] = {
+    "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
+    "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
+    "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
+    "a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",
+    "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
+    "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
+    "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
+    "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
+};
+
+// ASCII pieces
+char ascii_pieces[]="PNBRQKpnbrqk";
+
+// unicode pieces
+const char* unicode_pieces[12] = {
+    u8"♙", u8"♘", u8"♗", u8"♖", u8"♕", u8"♔",
+    u8"♟", u8"♞", u8"♝", u8"♜", u8"♛", u8"♚"
+};
+
+
+//convert ascii to enocoded constants
+map<char, int> char_pieces = {
+    {'P', P}, {'N', N}, {'B', B}, {'R', R}, {'Q', Q}, {'K', K},
+    {'p', p}, {'n', n}, {'b', b}, {'r', r}, {'q', q}, {'k', k}
+};
+
+// bitboard types
+U64 bitboards[12]; // for the pieces
+U64 occupancies [3]; // for white occupanices, black occupances and both
+int side = -1; // side to move
+
+// enpassant square
+int enpassant = no_sq;
+
+// castling rights
+int castle;
+
 // count bits on a bitboard (will be used to calculate pieces on a board)
 static inline int count_bits(U64 bitboard)
 {
@@ -107,35 +169,6 @@ U64 generate_magic_number(){
     return get_random_number_64() & get_random_number_64() & get_random_number_64();
 }
 
-
-// board squares representation
-enum{
-    a8, b8, c8, d8, e8, f8, g8, h8,
-    a7, b7, c7, d7, e7, f7, g7, h7,
-    a6, b6, c6, d6, e6, f6, g6, h6,
-    a5, b5, c5, d5, e5, f5, g5, h5,
-    a4, b4, c4, d4, e4, f4, g4, h4,
-    a3, b3, c3, d3, e3, f3, g3, h3,
-    a2, b2, c2, d2, e2, f2, g2, h2,
-    a1, b1, c1, d1, e1, f1, g1, h1
-};
-
-const char *coordinates [] = {
-    "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
-    "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
-    "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
-    "a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",
-    "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
-    "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
-    "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
-    "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
-};
-
-//side to move 
-enum { white, black };
-
-// for magic bitboards for sliding pieces
-enum {bishop, rook};
 
 
 
@@ -864,21 +897,9 @@ void init_all(){
 int main()
 {
     init_all();
-
-    U64 occupancy = 0ULL;
-    
-
-    set_bit(occupancy,e6);
-    set_bit(occupancy,e7);
-    set_bit(occupancy,f6);
-    set_bit(occupancy,b4);
-    set_bit(occupancy,a8);
-    set_bit(occupancy,h2);
-    set_bit(occupancy,g7);
-
-    print_bitboard(occupancy);
-    print_bitboard(get_bishop_attacks(e5,occupancy));
-    print_bitboard(get_rook_attacks(b5,occupancy));
+    set_bit(bitboards[P], f2);
+    print_bitboard(bitboards[P]);
+    cout << "piece: " << ascii_pieces[P];
 
     return 0;
 }
