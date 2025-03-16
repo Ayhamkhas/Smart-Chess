@@ -1098,9 +1098,9 @@ static inline U64 get_queen_attacks (int square, U64 occupancy){
     queen_attacks = bishop_attacks[square][bishop_occupancies];
 
     // get rook attacks assuming current board occupancies
-    occupancy &= rook_masks[square];
-    occupancy *= rook_magic_numbers[square];
-    occupancy >>= 64 - rook_relevant_bit[square];
+    rook_occupancies &= rook_masks[square];
+    rook_occupancies *= rook_magic_numbers[square];
+    rook_occupancies >>= 64 - rook_relevant_bit[square];
 
     // get rook attacks
     queen_attacks |= rook_attacks[square][rook_occupancies];
@@ -1120,6 +1120,11 @@ void init_all(){
 int main()
 {
     init_all();
-    
+    U64 occupancy = 0ULL;
+    set_bit(occupancy, b6);
+    set_bit(occupancy, c4);
+    print_bitboard(get_queen_attacks(g6,occupancy));
+
+
     return 0;
 }
