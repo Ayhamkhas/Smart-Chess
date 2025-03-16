@@ -52,7 +52,7 @@ enum {bishop, rook};
 enum {wk = 1, wq = 2 , bk = 4 , bq = 8};
 
 // enum pieces
-enum {P, N, B, R, K , Q, p, n, b, r, k, q};
+enum {P, N, B, R, Q , K, p, n, b, r, q, k};
 
 // board squares representation
 enum{
@@ -96,7 +96,7 @@ map<char, int> char_pieces = {
 // bitboard types
 U64 bitboards[12]; // for the pieces
 U64 occupancies [3]; // for white occupanices, black occupances and both
-int side = -1; // side to move
+int side ; // side to move
 
 // enpassant square
 int enpassant = no_sq;
@@ -184,6 +184,7 @@ space complexity= O(1)
 */
 void print_bitboard(U64 bitboard)
 {
+    cout << "\n";
     // loops over ranks in the board from 1 to 8
     for (int rank=0; rank <8; rank++)
     {
@@ -204,6 +205,77 @@ void print_bitboard(U64 bitboard)
     }
     // printing bitboard files 
     cout<<"\n        a b c d e f g h \n\n";
+}
+
+// print pieces on the whole board 
+void print_board()
+{
+    cout << "\n";
+    // loop over board ranks
+    for (int rank = 0 ; rank < 8; rank++)
+    {
+        for(int file = 0 ; file < 8; file++)
+        {
+            // init square variable
+            int square = rank * 8 + file;
+
+            // print ranks
+            if (!file)
+            {
+                cout << 8 - rank << "\t";
+            }
+
+            // define piece variable
+            int piece = -1;
+            
+            // loop over all pieces bibtboards, the idea here is to check all of them and see if there's a bit turned on on a specific square
+            for (int bb_piece = P; bb_piece <= k ; bb_piece++)
+            {
+                if (get_bit(bitboards[bb_piece], square))
+                {
+                    piece = bb_piece;
+                }
+            }
+
+            //
+            if (piece == -1)
+            {
+                cout << ". ";
+            }
+            else cout << ascii_pieces[piece] << " ";
+
+        }
+
+        // print new line every rank
+        cout << "\n";
+    }
+
+    // print board files
+    cout<<"\n        a b c d e f g h \n\n";
+    
+    // print side to move 
+    if( side == white)
+    {
+        cout << "Side to move: " << "white" << "\n";
+
+    }
+    else cout << "Side to move: " << "black" << "\n";
+
+    // en passant square 
+    if (enpassant != no_sq)
+    {
+        cout << "En passant: " << coordinates[enpassant];
+    }
+    else cout << "En passant: " << "no" << "\n";
+    cout << "\n";
+    // print castling rights 
+    cout << "Castling:  "
+              << ((castle & wk) ? 'K' : '-')
+              << ((castle & wq) ? 'Q' : '-')
+              << ((castle & bk) ? 'k' : '-')
+              << ((castle & bq) ? 'q' : '-')
+              << "\n\n";
+    cout << "\n";
 }
 
 
@@ -897,9 +969,77 @@ void init_all(){
 int main()
 {
     init_all();
+    // set white pawns
+    set_bit(bitboards[P], a2);
+    set_bit(bitboards[P], b2);
+    set_bit(bitboards[P], c2);
+    set_bit(bitboards[P], d2);
+    set_bit(bitboards[P], e2);
     set_bit(bitboards[P], f2);
-    print_bitboard(bitboards[P]);
-    cout << "piece: " << ascii_pieces[P];
+    set_bit(bitboards[P], g2);
+    set_bit(bitboards[P], h2);
+    
+    // set white knights
+    set_bit(bitboards[N], b1);
+    set_bit(bitboards[N], g1);
+    
+    // set white bishops
+    set_bit(bitboards[B], c1);
+    set_bit(bitboards[B], f1);
+    
+    // set white rooks
+    set_bit(bitboards[R], a1);
+    set_bit(bitboards[R], h1);
+    
+    // set white queen & king
+    set_bit(bitboards[Q], d1);
+    set_bit(bitboards[K], e1);
+    
+    // set white pawns
+    set_bit(bitboards[p], a7);
+    set_bit(bitboards[p], b7);
+    set_bit(bitboards[p], c7);
+    set_bit(bitboards[p], d7);
+    set_bit(bitboards[p], e7);
+    set_bit(bitboards[p], f7);
+    set_bit(bitboards[p], g7);
+    set_bit(bitboards[p], h7);
+    
+    // set white knights
+    set_bit(bitboards[n], b8);
+    set_bit(bitboards[n], g8);
+    
+    // set white bishops
+    set_bit(bitboards[b], c8);
+    set_bit(bitboards[b], f8);
+    
+    // set white rooks
+    set_bit(bitboards[r], a8);
+    set_bit(bitboards[r], h8);
+    
+    // set white queen & king
+    set_bit(bitboards[q], d8);
+    set_bit(bitboards[k], e8);
+    
+    // init side
+    side = black;
+
+    // init enpassant 
+    enpassant = e3;
+
+    // init castling rights
+    castle |= wk;
+    castle |= wq;
+    castle |= bk;
+    castle |= bq;
+
+    print_board();
+    
+    // print all bitboards 
+    for (int piece = P; piece <=k; piece++)
+    {
+        print_bitboard(bitboards[piece]);
+    }
 
     return 0;
 }
