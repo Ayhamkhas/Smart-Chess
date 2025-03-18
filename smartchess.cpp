@@ -1117,14 +1117,191 @@ void init_all(){
 }
 
 
+// is current given square is attacked by the current given side 
+static inline int isSquare_attacked(int square, int side)
+{
+    // attacked by white pawns
+    if ((side == white) && (pawn_attacks[black][square] & bitboards[P])) return 1;
+    
+    // attacked by black pawns
+    if ((side == black) && (pawn_attacks[white][square] & bitboards[p])) return 1;
+    
+    // attacked by knights
+    if (knight_attacks[square] & ((side == white) ? bitboards[N] : bitboards[n])) return 1;
+    
+    // attacked by bishops
+    if (get_bishop_attacks(square, occupancies[both]) & ((side == white) ? bitboards[B] : bitboards[b])) return 1;
+
+    // attacked by rooks
+    if (get_rook_attacks(square, occupancies[both]) & ((side == white) ? bitboards[R] : bitboards[r])) return 1;    
+
+    // attacked by bishops
+    if (get_queen_attacks(square, occupancies[both]) & ((side == white) ? bitboards[Q] : bitboards[q])) return 1;
+    
+    // attacked by kings
+    if (king_attacks[square] & ((side == white) ? bitboards[K] : bitboards[k])) return 1;
+
+    // by default return false
+    return 0;
+}   
+
+//print attacked squares
+void print_attacked_squares(int side)
+{
+    cout << "\n";
+    
+    // loop over board ranks
+    for (int rank = 0; rank < 8; rank++)
+    {
+        // loop over board files
+        for (int file = 0; file < 8; file++)
+        {
+            // init square
+            int square = rank * 8 + file;
+            
+            // print ranks
+            if (!file)
+                cout<< 8 - rank << '\t';
+            
+            // check whether current square is attacked or not
+            cout << isSquare_attacked(square, side) << " ";
+        }
+        
+        // print new line every rank
+        cout << "\n";
+    }
+    
+    // print files
+    cout<<"\n        a b c d e f g h \n\n";
+}
+
+// generate all moves 
+static inline void generate_moves()
+{
+    // def source square and target square 
+    int source_square;
+    int target_square;
+
+    // def current pieces bitboard copy
+    U64 bitboard;
+    U64 attacks;
+
+    // loop over all pieces on board
+    for (int piece = P; piece <=k ; piece++)
+    {
+        // init copy biboard
+        bitboard = bitboards[piece];
+
+        // generating white panws and white king castling moves 
+        if(side == white)
+        {
+            // pick up white pawn bitboards index
+            if (piece == P)
+            {
+                // loop over white pawns within white pawn bitboard
+                while (bitboard)
+                {
+                    // init source square
+                    source_square = get_least_bit(bitboard);
+                    
+                    // init target square
+                    target_square = source_square - 8;
+                    
+                    // generate quite pawn moves
+                    if (!(target_square < a8) && !get_bit(occupancies[both], target_square))
+                    {
+                        // pawn promotion
+                        if (source_square >= a7 && source_square <= h7)
+                        {
+                            cout << "pawn promotion: " << coordinates[source_square] << coordinates[target_square] << "q" << endl;
+                            cout << "pawn promotion: " << coordinates[source_square] << coordinates[target_square] << "r" << endl;
+                            cout << "pawn promotion: " << coordinates[source_square] << coordinates[target_square] << "b" << endl;
+                            cout << "pawn promotion: " << coordinates[source_square] << coordinates[target_square] << "n" << endl;
+                        }
+                        
+                        else
+                        {
+                            // one square ahead pawn move
+                            cout << "pawn push: " << coordinates[source_square] << coordinates[target_square] << endl;
+                            
+                            // two squares ahead pawn move
+                            if ((source_square >= a2 && source_square <= h2) && !get_bit(occupancies[both], target_square - 8))
+                                cout << "double pawn push: " << coordinates[source_square] << coordinates[target_square - 8] << endl;
+                        }
+                    }
+                    
+                    // pop ls1b from piece bitboard copy
+                    remove_bit(bitboard, source_square);
+                }
+            }
+        }
+        //generating black panws and black king castling moves 
+        else 
+        {
+            // pick up black pawn bitboards index
+            if (piece == p)
+            {
+                // loop over white pawns within white pawn bitboard
+                while (bitboard)
+                {
+                    // init source square
+                    source_square = get_least_bit(bitboard);
+                    
+                    // init target square
+                    target_square = source_square + 8;
+                    
+                    // generate quite pawn moves
+                    if (!(target_square > h1) && !get_bit(occupancies[both], target_square))
+                    {
+                        // pawn promotion
+                        if (source_square >= a2 && source_square <= h2)
+                        {
+                            cout << "pawn promotion: " << coordinates[source_square] << coordinates[target_square] << "q" << endl;
+                            cout << "pawn promotion: " << coordinates[source_square] << coordinates[target_square] << "r" << endl;
+                            cout << "pawn promotion: " << coordinates[source_square] << coordinates[target_square] << "b" << endl;
+                            cout << "pawn promotion: " << coordinates[source_square] << coordinates[target_square] << "n" << endl;
+                        }
+                        
+                        else
+                        {
+                            // one square ahead pawn move
+                            cout << "pawn push: " << coordinates[source_square] << coordinates[target_square] << endl;
+                            
+                            // two squares ahead pawn move
+                            if ((source_square >= a7 && source_square <= h7) && !get_bit(occupancies[both], target_square + 8))
+                                cout << "double pawn push: " << coordinates[source_square] << coordinates[target_square + 8] << endl;
+                        }
+                    }
+                    
+                    // pop ls1b from piece bitboard copy
+                    remove_bit(bitboard, source_square);
+                }
+            }
+        }
+
+        // generate knight moves
+
+        // generate bishop moves
+
+        // generate rook moves
+
+        // generate queen moves
+
+        // generate king moves
+
+    }
+
+
+}   
 int main()
 {
     init_all();
-    U64 occupancy = 0ULL;
-    set_bit(occupancy, b6);
-    set_bit(occupancy, c4);
-    print_bitboard(get_queen_attacks(g6,occupancy));
-
+    // parse custom FEN string
+    parse_fen(start_position);
+    print_board();
+    
+    // generate moves
+    generate_moves();
 
     return 0;
 }
