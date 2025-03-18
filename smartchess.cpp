@@ -1415,14 +1415,185 @@ static inline void generate_moves()
        
    
         // generate knight moves
+        if ((side == white) ? piece == N : piece == n)
+        {
+            // loop over source squares of piece bitboard copy
+            while (bitboard)
+            {
+                // init source square
+                source_square = get_least_bit(bitboard);
+                
+                // init piece attacks in order to get set of target squares
+                attacks = knight_attacks[source_square] & ((side == white) ? ~occupancies[white] : ~occupancies[black]);
+                
+                // loop over target squares available from generated attacks
+                while (attacks)
+                {
+                    // init target square
+                    target_square = get_least_bit(attacks);    
+                    
+                    // quite move
+                    if (!get_bit(((side == white) ? occupancies[black] : occupancies[white]), target_square))
+                        cout << "knight quiet move: " << coordinates[source_square] << coordinates[target_square] << endl;
+                    
+                    else
+                        // capture move
+                        cout << "knight capture: " << coordinates[source_square] << coordinates[target_square] << endl;
+                    
+                    // pop ls1b in current attacks set
+                    remove_bit(attacks, target_square);
+                }
+                
+                
+                // pop ls1b of the current piece bitboard copy
+                remove_bit(bitboard, source_square);
+            }
+        }
 
         // generate bishop moves
+        if ((side == white) ? piece == B : piece == b)
+        {
+            // loop over source squares of piece bitboard copy
+            while (bitboard)
+            {
+                // init source square
+                source_square = get_least_bit(bitboard);
+                
+                // init piece attacks in order to get set of target squares
+                attacks = get_bishop_attacks(source_square, occupancies[both]) & ((side == white) ? ~occupancies[white] : ~occupancies[black]);
+                
+                // loop over target squares available from generated attacks
+                while (attacks)
+                {
+                    // init target square
+                    target_square = get_least_bit(attacks);    
+                    
+                    // quite move
+                    if (!get_bit(((side == white) ? occupancies[black] : occupancies[white]), target_square))
+                        cout << "bishop quiet move: " << coordinates[source_square] << coordinates[target_square] << endl;
+                    
+                    else
+                        // capture move
+                        cout << "bishop capture: " << coordinates[source_square] << coordinates[target_square] << endl;
+                    
+                    // pop ls1b in current attacks set
+                    remove_bit(attacks, target_square);
+                }
+                
+                
+                // pop ls1b of the current piece bitboard copy
+                remove_bit(bitboard, source_square);
+            }
+        }
 
         // generate rook moves
+        if ((side == white) ? piece == R : piece == r)
+        {
+            // loop over source squares of piece bitboard copy
+            while (bitboard)
+            {
+                // init source square
+                source_square = get_least_bit(bitboard);
+                
+                // init piece attacks in order to get set of target squares
+                attacks = get_rook_attacks(source_square, occupancies[both]) & ((side == white) ? ~occupancies[white] : ~occupancies[black]);
+                
+                // loop over target squares available from generated attacks
+                while (attacks)
+                {
+                    // init target square
+                    target_square = get_least_bit(attacks);    
+                    
+                    // quite move
+                    if (!get_bit(((side == white) ? occupancies[black] : occupancies[white]), target_square))
+                        cout << "rook quiet move: " << coordinates[source_square] << coordinates[target_square] << endl;
+                    
+                    else
+                        // capture move
+                        cout << "rook capture: " << coordinates[source_square] << coordinates[target_square] << endl;
+                    
+                    // pop ls1b in current attacks set
+                    remove_bit(attacks, target_square);
+                }
+                
+                
+                // pop ls1b of the current piece bitboard copy
+                remove_bit(bitboard, source_square);
+            }
+        }
 
         // generate queen moves
+        if ((side == white) ? piece == Q : piece == q)
+                {
+                    // loop over source squares of piece bitboard copy
+                    while (bitboard)
+                    {
+                        // init source square
+                        source_square = get_least_bit(bitboard);
+                        
+                        // init piece attacks in order to get set of target squares
+                        attacks = get_queen_attacks(source_square, occupancies[both]) & ((side == white) ? ~occupancies[white] : ~occupancies[black]);
+                        
+                        // loop over target squares available from generated attacks
+                        while (attacks)
+                        {
+                            // init target square
+                            target_square = get_least_bit(attacks);    
+                            
+                            // quite move
+                            if (!get_bit(((side == white) ? occupancies[black] : occupancies[white]), target_square))
+                                cout << "queen quiet move: " << coordinates[source_square] << coordinates[target_square] << endl;
+                            
+                            else
+                                // capture move
+                                cout << "queen capture: " << coordinates[source_square] << coordinates[target_square] << endl;
+                            
+                            // pop ls1b in current attacks set
+                            remove_bit(attacks, target_square);
+                        }
+                        
+                        
+                        // pop ls1b of the current piece bitboard copy
+                        remove_bit(bitboard, source_square);
+                    }
+                }
 
         // generate king moves
+        if ((side == white) ? piece == K : piece == k)
+        {
+            // loop over source squares of piece bitboard copy
+            while (bitboard)
+            {
+                // init source square
+                source_square = get_least_bit(bitboard);
+                
+                // init piece attacks in order to get set of target squares
+                attacks = king_attacks[source_square] & ((side == white) ? ~occupancies[white] : ~occupancies[black]);
+                
+                // loop over target squares available from generated attacks
+                while (attacks)
+                {
+                    // init target square
+                    target_square = get_least_bit(attacks);    
+                    
+                    // quite move
+                    if (!get_bit(((side == white) ? occupancies[black] : occupancies[white]), target_square))
+                        cout << "king quiet move: " << coordinates[source_square] << coordinates[target_square] << endl;
+                    
+                    else
+                        // capture move
+                        cout << "king capture: " << coordinates[source_square] << coordinates[target_square] << endl;
+                    
+                    // pop ls1b in current attacks set
+                    remove_bit(attacks, target_square);
+                }
+                
+                
+                // pop ls1b of the current piece bitboard copy
+                remove_bit(bitboard, source_square);
+            }
+        }        
+        
     }
 
 }
@@ -1433,7 +1604,7 @@ int main()
 {
     init_all();
     // parse custom FEN string
-    parse_fen("r3k2r/p1ppqRb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQqk - 0 1 ");
+    parse_fen(cmk_position);
     print_board();
     
     // generate moves
