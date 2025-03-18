@@ -27,7 +27,7 @@ BLACK     PAWNs             KNIGHTS             BISHOPS              ROOKS      
 
 
 #include <iostream>
-#include <cstring>
+#include <string>
 #include <bits/stdc++.h>
 using namespace std; 
 
@@ -1229,9 +1229,75 @@ static inline void generate_moves()
                                 cout << "double pawn push: " << coordinates[source_square] << coordinates[target_square - 8] << endl;
                         }
                     }
+                    // init pawn attacks bitboard
+                    attacks = pawn_attacks[side][source_square] & occupancies[black];
+                    
+                    // generate pawn captures
+                    while (attacks)
+                    {
+                        // init target square
+                        target_square = get_least_bit(attacks);
+                        
+                        // pawn promotion
+                        if (source_square >= a7 && source_square <= h7)
+                        {
+                            cout << "pawn promotion capture: " << coordinates[source_square] << coordinates[target_square] << " q" << endl;
+                            cout << "pawn promotion capture: " << coordinates[source_square] << coordinates[target_square] << " r" << endl;
+                            cout << "pawn promotion capture: " << coordinates[source_square] << coordinates[target_square] << " b" << endl;
+                            cout << "pawn promotion capture: " << coordinates[source_square] << coordinates[target_square] << " n" << endl;
+                        }
+                        
+                        else
+                            // one square ahead pawn capture
+                            cout << "pawn capture: " << coordinates[source_square] << coordinates[target_square] << endl;
+
+                        remove_bit(attacks, target_square);
+                    }
+                    // generate enpassant captures
+                    if (enpassant != no_sq)
+                    {
+                        // lookup pawn attacks and bitwise AND with enpassant square (bit)
+                        U64 enpassant_attacks = pawn_attacks[side][source_square] & (1ULL << enpassant);
+                        
+                        // make sure enpassant capture available
+                        if (enpassant_attacks)
+                        {
+                            // init enpassant capture target square
+                            int target_enpassant = get_least_bit(enpassant_attacks);
+                            cout << "pawn enpassant capture: " << coordinates[source_square] << coordinates[target_enpassant] << endl;
+                        }
+                    }     
                     
                     // pop ls1b from piece bitboard copy
                     remove_bit(bitboard, source_square);
+                }
+            }
+        
+            // castling moves
+            if (piece == K)
+            {
+                // king side castling is available
+                if (castle & wk)
+                {
+                    // make sure square between king and king's rook are empty
+                    if (!get_bit(occupancies[both], f1) && !get_bit(occupancies[both], g1))
+                    {
+                        // make sure king and the f1 squares are not under attacks
+                        if (!isSquare_attacked(e1, black) && !isSquare_attacked(f1, black))
+                            cout <<"castling move: e1g1\n";
+                    }
+                }
+                
+                // queen side castling is available
+                if (castle & wq)
+                {
+                    // make sure square between king and queen's rook are empty
+                    if (!get_bit(occupancies[both], d1) && !get_bit(occupancies[both], c1) && !get_bit(occupancies[both], b1))
+                    {
+                        // make sure king and the d1 squares are not under attacks
+                        if (isSquare_attacked(e1, black) && !isSquare_attacked(d1, black))
+                            cout <<"castling move: e1c1\n";
+                    }
                 }
             }
         }
@@ -1256,10 +1322,10 @@ static inline void generate_moves()
                         // pawn promotion
                         if (source_square >= a2 && source_square <= h2)
                         {
-                            cout << "pawn promotion: " << coordinates[source_square] << coordinates[target_square] << "q" << endl;
-                            cout << "pawn promotion: " << coordinates[source_square] << coordinates[target_square] << "r" << endl;
-                            cout << "pawn promotion: " << coordinates[source_square] << coordinates[target_square] << "b" << endl;
-                            cout << "pawn promotion: " << coordinates[source_square] << coordinates[target_square] << "n" << endl;
+                            cout << "pawn promotion: " << coordinates[source_square] << coordinates[target_square] << " q" << endl;
+                            cout << "pawn promotion: " << coordinates[source_square] << coordinates[target_square] << " r" << endl;
+                            cout << "pawn promotion: " << coordinates[source_square] << coordinates[target_square] << " b" << endl;
+                            cout << "pawn promotion: " << coordinates[source_square] << coordinates[target_square] << " n" << endl;
                         }
                         
                         else
@@ -1272,13 +1338,82 @@ static inline void generate_moves()
                                 cout << "double pawn push: " << coordinates[source_square] << coordinates[target_square + 8] << endl;
                         }
                     }
+                    // init pawn attacks bitboard
+                    attacks = pawn_attacks[side][source_square] & occupancies[white];
                     
-                    // pop ls1b from piece bitboard copy
-                    remove_bit(bitboard, source_square);
-                }
-            }
-        }
+                    // generate pawn captures
+                    while (attacks)
+                    {
+                        // init target square
+                        target_square = get_least_bit(attacks);
+                        
+                        // pawn promotion
+                        if (source_square >= a2 && source_square <= h2)
+                        {
+                            cout << "pawn promotion capture: " << coordinates[source_square] << coordinates[target_square] << "q" << endl;
+                            cout << "pawn promotion capture: " << coordinates[source_square] << coordinates[target_square] << "r" << endl;
+                            cout << "pawn promotion capture: " << coordinates[source_square] << coordinates[target_square] << "b" << endl;
+                            cout << "pawn promotion capture: " << coordinates[source_square] << coordinates[target_square] << "n" << endl;
+                        }
+                        
+                        else
+                            // one square ahead pawn capture
+                            cout << "pawn capture: " << coordinates[source_square] << coordinates[target_square] << endl;
 
+                        remove_bit(attacks, target_square);
+                    }
+                    // generate enpassant captures
+                    if (enpassant != no_sq)
+                    {
+                        // lookup pawn attacks and bitwise AND with enpassant square (bit)
+                        U64 enpassant_attacks = pawn_attacks[side][source_square] & (1ULL << enpassant);
+                        
+                        // make sure enpassant capture available
+                        if (enpassant_attacks)
+                        {
+                            // init enpassant capture target square
+                            int target_enpassant = get_least_bit(enpassant_attacks);
+                            cout << "pawn enpassant capture: " << coordinates[source_square] << coordinates[target_enpassant] << endl;
+                        }
+                    }      
+
+                    // pop ls1b from piece bitboard copy
+                    remove_bit(bitboard, source_square);    
+                }   
+            }
+            
+            // check for black side castling rights 
+            if (piece == k)
+            {
+                    // king side castling is available
+                    if (castle & bk)
+                    {
+                        // make sure square between king and king's rook are empty
+                        if (!get_bit(occupancies[both], f8) && !get_bit(occupancies[both], g8))
+                        {
+                            // make sure king and the f8 squares are not under attacks
+                            if (!isSquare_attacked(e8, white) && !isSquare_attacked(f8, white))
+                                cout << "castling move: e8g8\n";
+                        }
+                    }
+                    
+                    // queen side castling is available
+                    if (castle & bq)
+                    {
+                        // make sure square between king and queen's rook are empty
+                        if (!get_bit(occupancies[both], d8) && !get_bit(occupancies[both], c8) && !get_bit(occupancies[both], b8))
+                        {
+                            // make sure king and the d8 squares are not under attacks
+                            if (!isSquare_attacked(e8, white) && !isSquare_attacked(d8, white))
+                                cout << "castling move: e8c8\n";
+                        }
+                    }
+            }
+
+
+        }
+       
+   
         // generate knight moves
 
         // generate bishop moves
@@ -1288,16 +1423,17 @@ static inline void generate_moves()
         // generate queen moves
 
         // generate king moves
-
     }
 
+}
 
-}   
+
+
 int main()
 {
     init_all();
     // parse custom FEN string
-    parse_fen(start_position);
+    parse_fen("r3k2r/p1ppqRb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQqk - 0 1 ");
     print_board();
     
     // generate moves
