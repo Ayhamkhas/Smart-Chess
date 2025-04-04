@@ -30,6 +30,7 @@
     #include <string>
     #include <bits/stdc++.h>
     #include <unordered_map>
+    #include <windows.h>
 
 
     using namespace std; 
@@ -197,6 +198,9 @@
         }
         else return -1;
     }
+    U64 bitboards_copy[12], occupancies_copy[3];
+    int side_copy, enpassant_copy, castle_copy;
+
 
     /****************************\
 
@@ -393,7 +397,8 @@
                             piece = bb_piece;
                         }
                     } 
-                    if(piece == -1) file --;  
+                    if(piece == -1) 
+                        file --;  
 
                     // adjust file counter
                     file += offset;
@@ -401,14 +406,15 @@
                 }
 
                 // match rank seperator 
-                if(*fen == '/') fen++;
+                if(*fen == '/') 
+                    fen++;
             }
         }
 
         // to check which side to move after parsing
         fen++;
 
-        (*fen =='w') ? (side = white): side = black;
+        (*fen =='w') ? (side = white): (side = black);
 
         // extract castling rights
         fen += 2;
@@ -1244,8 +1250,6 @@
 
     // preserve board state
     #define copy_board()                                                      \
-        U64 bitboards_copy[12], occupancies_copy[3];                          \
-        int side_copy, enpassant_copy, castle_copy;                           \
         memcpy(bitboards_copy, bitboards, 96);                                \
         memcpy(occupancies_copy, occupancies, 24);                            \
         side_copy = side, enpassant_copy = enpassant, castle_copy = castle;   \
@@ -1256,6 +1260,19 @@
         memcpy(occupancies, occupancies_copy, 24);                            \
         side = side_copy, enpassant = enpassant_copy, castle = castle_copy;   \
 
+    
+    // castling rights update constants
+    const int castling_rights[64] = {
+        7, 15, 15, 15,  3, 15, 15, 11,
+        15, 15, 15, 15, 15, 15, 15, 15,
+        15, 15, 15, 15, 15, 15, 15, 15,
+        15, 15, 15, 15, 15, 15, 15, 15,
+        15, 15, 15, 15, 15, 15, 15, 15,
+        15, 15, 15, 15, 15, 15, 15, 15,
+        15, 15, 15, 15, 15, 15, 15, 15,
+        13, 15, 15, 15, 12, 15, 15, 14
+    };
+
 
 
     // move types
@@ -1264,13 +1281,11 @@
     // make move on chess board
     static inline int make_move(int move, int move_flag)
     {
-        // quite moves
+        // handle all move types
         if (move_flag == all_moves)
         {
-            // preserve board state
             copy_board();
-            
-            // parse move
+    
             int source_square = get_move_source(move);
             int target_square = get_move_target(move);
             int piece = get_move_piece(move);
@@ -1279,25 +1294,140 @@
             int double_push = get_move_double(move);
             int enpass = get_move_enpassant(move);
             int castling = get_move_castling(move);
-            
+    
             // move piece
             remove_bit(bitboards[piece], source_square);
             set_bit(bitboards[piece], target_square);
-        }
+    
+            // handling capture moves
+            if (capture)
+            {
+                // pick up bitboard piece index ranges depending on side
+                int start_piece, end_piece;
+                
+                // white to move
+                if (side == white)
+                {
+                    start_piece = p;
+                    end_piece = k;
+                }
+                
+                // black to move
+                else
+                {
+                    start_piece = P;
+                    end_piece = K;
+                }
+                
+                // loop over bitboards opposite to the current side to move
+                for (int bb_piece = start_piece; bb_piece <= end_piece; bb_piece++)
+                {
+                    // if there's a piece on the target square
+                    if (get_bit(bitboards[bb_piece], target_square))
+                    {
+                        // remove it from corresponding bitboard
+                        remove_bit(bitboards[bb_piece], target_square);
+                        break;
+                    }
+                }
+            }
+
+            // handle promotion
+            if (promoted)
+            {
+                // erase the pawn from the target square
+                remove_bit(bitboards[(side == white) ? P : p], target_square);
+                
+                // set up promoted piece on chess board
+                set_bit(bitboards[promoted], target_square);
+            }
+            if(enpass)
+            {
+                // erase the pawn depending on side to move
+                (side == white) ? remove_bit(bitboards[p], target_square + 8) :
+                                  remove_bit(bitboards[P], target_square - 8);
+            }
+
+            //reset enpassant square 
+            enpassant = no_sq;
+
+            // handle double push
+            if (double_push)
+            {
+                (side==white) ? enpassant = target_square + 8 : enpassant = target_square - 8;
+            }
+
+            // handle castling
+            if(castling)
+            {
+                switch(target_square)
+                {
+                    case(g1) :
+                        remove_bit(bitboards[R], h1);
+                        set_bit(bitboards[R], f1);
+                        break;
+                    case(c1) :
+                        remove_bit(bitboards[R], a1);
+                        set_bit(bitboards[R], d1);
+                        break;
+                    case(g8) :    
+                        remove_bit(bitboards[r], h8);
+                        set_bit(bitboards[r], f8);
+                        break;
+                    case(c8) :       
+                        remove_bit(bitboards[r], a8);
+                        set_bit(bitboards[r], d8);
+                        break;
+                }
+
+            }
         
-        // capture moves
+            // update castling rights
+            castle &= castling_rights[source_square];
+            castle &= castling_rights[target_square];
+
+            //update occupancies
+            memset(occupancies, 0ULL, 24);
+            for(int bb_piece = P; bb_piece <= K; bb_piece++) // for white pieces
+            {
+                occupancies[white] |= bitboards[bb_piece];
+            }
+            for(int bb_piece = p; bb_piece <= k; bb_piece++) // for black pieces
+            {
+                occupancies[black] |= bitboards[bb_piece];
+            }
+
+            // update both sides occupancies
+            occupancies[both] |= occupancies[white];
+            occupancies[both] |= occupancies[black];
+
+            // update side to move
+            side ^= 1; // flip side to move
+
+            //checking for king checks
+            if (isSquare_attacked((side == white) ? get_least_bit(bitboards[k]) : get_least_bit(bitboards[K]), side))
+
+            {
+                // take back move
+                take_back();
+                return 0; // return illegal move
+            }
+            else
+                return 1; // return legal move
+        }
+        // handle capture-only mode
         else
         {
-            // make sure move is the capture
             if (get_move_capture(move))
-                make_move(move, all_moves);
-            
-            // otherwise the move is not a capture
+            {
+                return make_move(move, all_moves); // make move and return success
+            }
             else
-                // don't make it
+            {
                 return 0;
+            }
         }
-        return 1;
+    
     }
     // generate all moves 
     static inline void generate_moves(moves *move_list)
@@ -1561,7 +1691,7 @@
                         
                         // quite move
                         if (!get_bit(((side == white) ? occupancies[black] : occupancies[white]), target_square))
-                            add_move(move_list, encode_move(source_square, target_square, piece, 0, 0, 0, 0, 0));
+                             add_move(move_list, encode_move(source_square, target_square, piece, 0, 0, 0, 0, 0));
                         
                         else
                             // capture move
@@ -1788,6 +1918,50 @@
         cout << "\n\n                   Total number of moves: " << move_list->count << "\n\n";
     }
 
+    int get_time() // return time in milliseconds for debugging and testing purposes 
+    {
+        // get time in milliseconds
+        return GetTickCount();
+    }
+    // leaf nodes (number of positions reached during the test of the move generator at a given depth)
+    long nodes;
+
+    // perft driver
+    static inline void perft_driver(int depth)
+    {
+        // reccursion escape condition
+        if (depth == 0)
+        {
+            // increment nodes count (count reached positions)
+            nodes++;
+            return;
+        }
+        
+        // create move list instance
+        moves move_list[1];
+        
+        // generate moves
+        generate_moves(move_list);
+        
+            // loop over generated moves
+        for (int move_count = 0; move_count < move_list->count; move_count++)
+        {   
+            // preserve board state
+            copy_board();
+            
+            // make move
+            if (!make_move(move_list->moves[move_count], all_moves))
+                // skip to the next move
+                continue;
+            
+            // call perft driver recursively
+            perft_driver(depth - 1);
+            
+            // take back
+            take_back();
+        }
+    }
+
 
 
     int main()
@@ -1798,31 +1972,16 @@
         // parse fen
         parse_fen(tricky_position);
         print_board();
-        
-        // create move list instance
-        moves move_list[1];
-        
-        // generate moves
-        generate_moves(move_list);
-        
-        // loop over generated moves
-        for (int move_count = 0; move_count < move_list->count; move_count++)
-        {
-            // init move
-            int move = move_list->moves[move_count];
+
+        // start tracking time
+        int start = get_time();
+
+        // perft
+        perft_driver(1);
+
+        //time taken to generate moves
+        cout << "\n\nTime taken to generate moves: " << get_time() - start << " ms\n\n";
+        cout << "Total number of positions reached: " << nodes << "\n\n";
             
-            // preserve board state
-            copy_board();
-            
-            // make move
-            make_move(move, all_moves);
-            print_board();
-            getchar();
-            
-            // take back
-            take_back();
-            print_board();
-            getchar();
-        }
         return 0;   
     }
