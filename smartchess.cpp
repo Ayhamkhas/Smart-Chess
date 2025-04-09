@@ -43,28 +43,8 @@
     const char* killer_position = "rnbqkb1r/pp1p1pPp/8/2p1pP2/1P1P4/3P3P/P1P1P3/RNBQKBNR w KQkq e6 0 1";
     const char* cmk_position = "r2q1rk1/ppp2ppp/2n1bn2/2b1p3/3pP3/3P1NPP/PPP1NPB1/R1BQ1RK1 w - - 0 9 ";
 
-    /****************************\
-
-            BIT MANIPULATION
-
-    \****************************/
 
     #define U64 unsigned long long // for bitbaord data type definition, it's a 64 bit unsigned integered represented in binary
-    #define get_bit(bitboard,square) (bitboard & (1ULL << square)) // used to get the state of a bit in a sepcifc square (either empty or not)
-    #define set_bit(bitboard, square) (bitboard |= (1ULL << square)) // set a specifc square on the board 
-    #define remove_bit(bitboard, square) (get_bit(bitboard,square) ? bitboard ^= (1ULL << square) : 0) // remove a piece if it exists on a sepcific square on the board
-
-    //side to move 
-    enum { white, black, both };
-
-    // for magic bitboards for sliding pieces
-    enum {bishop, rook};
-
-    // enum for caslting sides
-    enum {wk = 1, wq = 2 , bk = 4 , bq = 8};
-
-    // enum pieces
-    enum {P, N, B, R, Q , K, p, n, b, r, q, k};
 
     // board squares representation
     enum{
@@ -77,6 +57,21 @@
         a2, b2, c2, d2, e2, f2, g2, h2,
         a1, b1, c1, d1, e1, f1, g1, h1, no_sq
     };
+
+    enum {P, N, B, R, Q , K, p, n, b, r, q, k};
+    
+    //side to move 
+    enum { white, black, both };
+
+    // for magic bitboards for sliding pieces
+    enum {bishop, rook};
+
+    // enum for caslting sides
+    enum {wk = 1, wq = 2 , bk = 4 , bq = 8};
+
+    // enum pieces
+
+
 
     const char *coordinates [] = {
         "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
@@ -91,12 +86,6 @@
 
     // ASCII pieces
     char ascii_pieces[]="PNBRQKpnbrqk";
-
-    // unicode pieces
-    const char* unicode_pieces[12] = {
-        u8"♙", u8"♘", u8"♗", u8"♖", u8"♕", u8"♔",
-        u8"♟", u8"♞", u8"♝", u8"♜", u8"♛", u8"♚"
-    };
 
 
     //convert ascii to enocoded constants
@@ -117,62 +106,73 @@
         {'n', 'n'}
     };
 
-    // move list structure
-    typedef struct {
-        // moves
-        int moves[256];
-        
-        // move count
-        int count;
-    } moves;
-
-    #define encode_move(source, target, piece, promoted, capture, double_push, enpassant, castling) (source | (target << 6) | (piece << 12) | (promoted << 16) | (capture << 20) | (double_push << 21) | (enpassant << 22) | (castling << 23))
-
-    // extract source square
-    #define get_move_source(move) (move & 0x3f)
-
-    // extract target square
-    #define get_move_target(move) ((move & 0xfc0) >> 6)
-
-    // extract piece
-    #define get_move_piece(move) ((move & 0xf000) >> 12)
-
-    // extract promoted piece
-    #define get_move_promoted(move) ((move & 0xf0000) >> 16)
-
-    // extract capture flag
-    #define get_move_capture(move) (move & 0x100000)
-
-    // extract double pawn push flag
-    #define get_move_double(move) (move & 0x200000)
-
-    // extract enpassant flag
-    #define get_move_enpassant(move) (move & 0x400000)
-
-    // extract castling flag
-    #define get_move_castling(move) (move & 0x800000)
-
-    // add move to the move list
-    static inline void add_move(moves *move_list, int move)
-    {
-        // strore move
-        move_list->moves[move_list->count] = move;
-        
-        // increment move count
-        move_list->count++;
-    }
-
-
     // bitboard types
     U64 bitboards[12]; // for the pieces
     U64 occupancies [3]; // for white occupanices, black occupances and both
     int side ; // side to move
+
 
     // enpassant square
     int enpassant = no_sq;
 
     // castling rights
     int castle;
+
+   /****************************\
+
+    RADNOM MAGIC NUMBER CANDIDATES
+
+    \****************************/
+
+
+
+    //pseudo random number state generated randomly to be used in magic bitboards implementations
+    unsigned int random_state = 1804289383;
+
+    // generate 32-bit pseudo legal numbers 
+    unsigned int get_random_number_32()
+    {
+        unsigned int number = random_state;
+
+        //XOR shift algorithm
+        number ^= number << 13;
+        number ^= number >> 17;
+        number ^= number << 5;
+
+        //update state 
+        random_state = number ;
+
+        return number;
+    }
+
+    U64 get_random_number_64(){
+        
+        U64 n1, n2, n3, n4;
+
+        // init random numbers slicing 16 bits from most significant 1st bit side
+        n1 = (U64)(get_random_number_32()) & 0xFFFF;
+        n2 = (U64)(get_random_number_32()) & 0xFFFF;
+        n3 = (U64)(get_random_number_32()) & 0xFFFF;
+        n4 = (U64)(get_random_number_32()) & 0xFFFF;
+
+        return n1 | (n2 << 16) | (n3 << 32) | (n4 << 48);
+    }
+    
+    // generate magic number candidate
+    U64 generate_magic_number(){
+        return get_random_number_64() & get_random_number_64() & get_random_number_64();
+    }
+
+    /****************************\
+
+            BIT MANIPULATION
+
+    \****************************/
+
+
+    #define get_bit(bitboard,square) (bitboard & (1ULL << square)) // used to get the state of a bit in a sepcifc square (either empty or not)
+    #define set_bit(bitboard, square) (bitboard |= (1ULL << square)) // set a specifc square on the board 
+    #define remove_bit(bitboard, square) ((bitboard) &= ~(1ULL << (square))) // remove a piece if it exists on a sepcific square on the board
 
     // count bits on a bitboard (will be used to calculate pieces on a board)
     static inline int count_bits(U64 bitboard)
@@ -193,57 +193,13 @@
     {
         if(bitboard)
         {
-            return count_bits((bitboard & -bitboard)-1);
+            return count_bits((bitboard & -bitboard) - 1);
         
         }
-        else return -1;
+
+        else 
+            return -1;
     }
-    U64 bitboards_copy[12], occupancies_copy[3];
-    int side_copy, enpassant_copy, castle_copy;
-
-
-    /****************************\
-
-    RADNOM MAGIC NUMBER CANDIDATES
-
-    \****************************/
-    //pseudo random number state generated randomly to be used in magic bitboards implementations
-    unsigned int random_state = 1804289383;
-
-    // generate 32-bit pseudo legal numbers 
-    unsigned int get_random_number_32()
-    {
-        unsigned int number = random_state;
-
-        //XOR shift algorithm
-        number ^= number << 13;
-        number ^= number >> 17;
-        number ^= number << 5;
-
-        //update state 
-        random_state = number ;
-
-        return number;
-    }
-    U64 get_random_number_64(){
-        
-        U64 n1, n2, n3, n4;
-
-        // init random numbers slicing 16 bits from most significant 1st bit side
-        n1 = (U64)(get_random_number_32()) & 0xFFFF;
-        n2 = (U64)(get_random_number_32()) & 0xFFFF;
-        n3 = (U64)(get_random_number_32()) & 0xFFFF;
-        n4 = (U64)(get_random_number_32()) & 0xFFFF;
-
-        return n1 | (n2 << 16) | (n3 << 32) | (n4 << 48);
-    }
-    // generate magic number candidate
-    U64 generate_magic_number(){
-        return get_random_number_64() & get_random_number_64() & get_random_number_64();
-    }
-
-
-
 
     /****************************\
 
@@ -255,219 +211,221 @@
     time complexity= O(1)
     space complexity= O(1)
     */
-    void print_bitboard(U64 bitboard)
-    {
-        cout << "\n";
-        // loops over ranks in the board from 1 to 8
-        for (int rank=0; rank <8; rank++)
-        {
-            //loops over bitboard files 
-            for(int file=0; file<8; file++)
-            {
-                //convert file and rank into a specific square in the board 
-                int square= rank*8 + file;
-                if(!file)
-                {
-                    cout<< 8 - rank << '\t';
-                }
-                cout<< (get_bit(bitboard,square) ? 1 : 0 )<<" "; // to check if the square is empty or not, if not we print 1 otherwise we print 0
-            }
+   void print_bitboard(U64 bitboard)
+   {
+       cout << "\n";
+       // loops over ranks in the board from 1 to 8
+       for (int rank=0; rank <8; rank++)
+       {
+           //loops over bitboard files 
+           for(int file=0; file<8; file++)
+           {
+               //convert file and rank into a specific square in the board 
+               int square= rank*8 + file;
+               if(!file)
+               {
+                   cout<< 8 - rank << '\t';
+               }
+               cout<< (get_bit(bitboard,square) ? 1 : 0 )<<" "; // to check if the square is empty or not, if not we print 1 otherwise we print 0
+           }
 
-            // printing a new line after each rank
-            cout<<'\n';
-        }
-        // printing bitboard files 
-        cout<<"\n        a b c d e f g h \n\n";
+           // printing a new line after each rank
+           cout<<'\n';
+       }
+       // printing bitboard files 
+       cout<<"\n        a b c d e f g h \n\n";
+   }
+
+   // print pieces on the whole board 
+   void print_board()
+   {
+       cout << "\n";
+       // loop over board ranks
+       for (int rank = 0 ; rank < 8; rank++)
+       {
+           for(int file = 0 ; file < 8; file++)
+           {
+               // init square variable
+               int square = rank * 8 + file;
+
+               // print ranks
+               if (!file)
+               {
+                   cout << 8 - rank << "\t";
+               }
+
+               // define piece variable
+               int piece = -1;
+               
+               // loop over all pieces bibtboards, the idea here is to check all of them and see if there's a bit turned on on a specific square
+               for (int bb_piece = P; bb_piece <= k ; bb_piece++)
+               {
+                   if (get_bit(bitboards[bb_piece], square))
+                   {
+                       piece = bb_piece;
+                   }
+               }
+
+               //
+               if (piece == -1)
+               {
+                   cout << ". ";
+               }
+               else cout << ascii_pieces[piece] << " ";
+
+           }
+
+           // print new line every rank
+           cout << "\n";
+       }
+
+       // print board files
+       cout<<"\n        a b c d e f g h \n\n";
+       
+       // print side to move 
+       if( side == white)
+       {
+           cout << "Side to move: " << "white" << "\n";
+
+       }
+       else cout << "Side to move: " << "black" << "\n";
+
+       // en passant square 
+       cout << "Enpassant: " << ((enpassant != no_sq) ? coordinates[enpassant] : "no") << endl;
+       // print castling rights 
+       cout << "Castling:  "
+               << ((castle & wk) ? 'K' : '-')
+               << ((castle & wq) ? 'Q' : '-')
+               << ((castle & bk) ? 'k' : '-')
+               << ((castle & bq) ? 'q' : '-')
+               << "\n\n";
+       cout << "\n";
     }
 
-    // print pieces on the whole board 
-    void print_board()
-    {
-        cout << "\n";
-        // loop over board ranks
-        for (int rank = 0 ; rank < 8; rank++)
-        {
-            for(int file = 0 ; file < 8; file++)
-            {
-                // init square variable
-                int square = rank * 8 + file;
+   // pare FEN string 
+   void parse_fen(const char* fen)
+   {
+       // reset board position 
+       memset(bitboards, 0ULL, sizeof(bitboards));
 
-                // print ranks
-                if (!file)
-                {
-                    cout << 8 - rank << "\t";
-                }
+       // reset occupancies
+       memset(occupancies, 0ULL, sizeof(occupancies));
 
-                // define piece variable
-                int piece = -1;
-                
-                // loop over all pieces bibtboards, the idea here is to check all of them and see if there's a bit turned on on a specific square
-                for (int bb_piece = P; bb_piece <= k ; bb_piece++)
-                {
-                    if (get_bit(bitboards[bb_piece], square))
-                    {
-                        piece = bb_piece;
-                    }
-                }
+       // reset game state variables
+       side = 0;
+       enpassant = no_sq;
+       castle = 0;
 
-                //
-                if (piece == -1)
-                {
-                    cout << ". ";
-                }
-                else cout << ascii_pieces[piece] << " ";
+       //loop over board ranks and fike 
+       for (int rank = 0 ; rank < 8; rank++)
+       {
+           for (int file = 0; file < 8; file ++)
+           {
+               int square = rank * 8 + file;
 
-            }
+               // match ascii characters within fen strings
+               if ((*fen >='a' && *fen <='z') || (*fen >='A' && *fen <='Z'))
+               {
+                   // init piece type 
+                   int piece = char_pieces[*fen];
 
-            // print new line every rank
-            cout << "\n";
-        }
+                   //set piece on corresponding bitboard
+                   set_bit(bitboards[piece], square);
 
-        // print board files
-        cout<<"\n        a b c d e f g h \n\n";
-        
-        // print side to move 
-        if( side == white)
-        {
-            cout << "Side to move: " << "white" << "\n";
+                   //increment pointer to fen string
+                   fen++;
+               }
 
-        }
-        else cout << "Side to move: " << "black" << "\n";
+               //match empty square numbers within fen string
+               if(*fen >='0' && *fen <='9')
+               {
+                   // init offset
+                   int offset = *fen -'0';
 
-        // en passant square 
-        cout << "Enpassant: " << ((enpassant != no_sq) ? coordinates[enpassant] : "no") << endl;
-        // print castling rights 
-        cout << "Castling:  "
-                << ((castle & wk) ? 'K' : '-')
-                << ((castle & wq) ? 'Q' : '-')
-                << ((castle & bk) ? 'k' : '-')
-                << ((castle & bq) ? 'q' : '-')
-                << "\n\n";
-        cout << "\n";
+                   // define piece variable
+                   int piece = -1;
+                   
+                   // loop over all pieces bibtboards, the idea here is to check all of them and see if there's a bit turned on on a specific square
+                   for (int bb_piece = P; bb_piece <= k ; bb_piece++)
+                   {
+                       if (get_bit(bitboards[bb_piece], square))
+                       {
+                           piece = bb_piece;
+                       }
+                   } 
+                   if(piece == -1) 
+                       file --;  
+
+                   // adjust file counter
+                   file += offset;
+                   fen++; 
+               }
+
+               // match rank seperator 
+               if(*fen == '/') 
+                   fen++;
+           }
+       }
+
+       // to check which side to move after parsing
+       fen++;
+
+       (*fen =='w') ? (side = white): (side = black);
+
+       // extract castling rights
+       fen += 2;
+       while(*fen != ' ')
+       {
+           switch (*fen)
+           {
+               case 'K' : castle |= wk; break;
+               case 'Q' : castle |= wq; break;
+               case 'k' : castle |= bk; break;
+               case 'q' : castle |= bq; break;
+               case '-': break;
+           }
+
+           fen++;
+       }
+
+       // go to parsing enpassant square 
+       fen++;  
+
+       // parse enpassant square
+       if (*fen != '-')
+       {
+           // parse enpassant file & rank
+           int file = fen[0] - 'a';
+           int rank = 8 - (fen[1] - '0');
+           
+           // init enpassant square
+           enpassant = rank * 8 + file;
+       }
+       
+       // no enpassant square
+       else
+           enpassant = no_sq;
+       
+       // intit white occupancies
+       // loop over white pieces
+       for (int piece = P; piece <= K ; piece++)
+       {   
+           occupancies[white] |= bitboards[piece];
+       }
+
+       // for black occupancies
+       for (int piece = p; piece <= k ; piece++)
+       {   
+           occupancies[black] |= bitboards[piece];
+       }
+       
+       // for all occupancies
+       occupancies[both] |= occupancies[white];
+       occupancies[both] |= occupancies[black];
     }
 
-    // pare FEN string 
-    void parse_fen(const char* fen)
-    {
-        // reset board position 
-        memset(bitboards, 0ULL, sizeof(bitboards));
 
-        // reset occupancies
-        memset(occupancies, 0ULL, sizeof(occupancies));
-
-        // reset game state variables
-        side = 0;
-        enpassant = no_sq;
-        castle = 0;
-
-        //loop over board ranks and fike 
-        for (int rank = 0 ; rank < 8; rank++)
-        {
-            for (int file = 0; file < 8; file ++)
-            {
-                int square = rank * 8 + file;
-
-                // match ascii characters within fen strings
-                if ((*fen >='a' && *fen <='z') || (*fen >='A' && *fen <='Z'))
-                {
-                    // init piece type 
-                    int piece = char_pieces[*fen];
-
-                    //set piece on corresponding bitboard
-                    set_bit(bitboards[piece], square);
-
-                    //increment pointer to fen string
-                    fen++;
-                }
-
-                //match empty square numbers within fen string
-                if(*fen >='0' && *fen <='9')
-                {
-                    // init offset
-                    int offset = *fen -'0';
-
-                    // define piece variable
-                    int piece = -1;
-                    
-                    // loop over all pieces bibtboards, the idea here is to check all of them and see if there's a bit turned on on a specific square
-                    for (int bb_piece = P; bb_piece <= k ; bb_piece++)
-                    {
-                        if (get_bit(bitboards[bb_piece], square))
-                        {
-                            piece = bb_piece;
-                        }
-                    } 
-                    if(piece == -1) 
-                        file --;  
-
-                    // adjust file counter
-                    file += offset;
-                    fen++; 
-                }
-
-                // match rank seperator 
-                if(*fen == '/') 
-                    fen++;
-            }
-        }
-
-        // to check which side to move after parsing
-        fen++;
-
-        (*fen =='w') ? (side = white): (side = black);
-
-        // extract castling rights
-        fen += 2;
-        while(*fen != ' ')
-        {
-            switch (*fen)
-            {
-                case 'K' : castle |= wk; break;
-                case 'Q' : castle |= wq; break;
-                case 'k' : castle |= bk; break;
-                case 'q' : castle |= bq; break;
-                case '-': break;
-            }
-
-            fen++;
-        }
-
-        // go to parsing enpassant square 
-        fen++;  
-
-        // parse enpassant square
-        if (*fen != '-')
-        {
-            // parse enpassant file & rank
-            int file = fen[0] - 'a';
-            int rank = 8 - (fen[1] - '0');
-            
-            // init enpassant square
-            enpassant = rank * 8 + file;
-        }
-        
-        // no enpassant square
-        else
-            enpassant = no_sq;
-        
-        // intit white occupancies
-        // loop over white pieces
-        for (int piece = P; piece <= K ; piece++)
-        {   
-            occupancies[white] |= bitboards[piece];
-        }
-
-        // for black occupancies
-        for (int piece = p; piece <= k ; piece++)
-        {   
-            occupancies[black] |= bitboards[piece];
-        }
-        
-        // for all occupancies
-        occupancies[both] |= occupancies[white];
-        occupancies[both] |= occupancies[black];
-    }
-
+   
     /****************************\
 
             ATTACK TABLES
@@ -1248,8 +1206,126 @@
 
     \****************************/
 
+
+    // encode move
+    #define encode_move(source, target, piece, promoted, capture, double, enpassant, castling) \
+    (source) |          \
+    (target << 6) |     \
+    (piece << 12) |     \
+    (promoted << 16) |  \
+    (capture << 20) |   \
+    (double << 21) |    \
+    (enpassant << 22) | \
+    (castling << 23)    \
+    // extract source square
+    #define get_move_source(move) (move & 0x3f)
+
+    // extract target square
+    #define get_move_target(move) ((move & 0xfc0) >> 6)
+
+    // extract piece
+    #define get_move_piece(move) ((move & 0xf000) >> 12)
+
+    // extract promoted piece
+    #define get_move_promoted(move) ((move & 0xf0000) >> 16)
+
+    // extract capture flag
+    #define get_move_capture(move) (move & 0x100000)
+
+    // extract double pawn push flag
+    #define get_move_double(move) (move & 0x200000)
+
+    // extract enpassant flag
+    #define get_move_enpassant(move) (move & 0x400000)
+
+    // extract castling flag
+    #define get_move_castling(move) (move & 0x800000)
+
+    // move list structure
+    typedef struct {
+        // moves
+        int moves[256];
+        
+        // move count
+        int count;
+    } moves;
+
+    // add move to the move list
+    static inline void add_move(moves *move_list, int move)
+    {
+        // strore move
+        move_list->moves[move_list->count] = move;
+        
+        // increment move count
+        move_list->count++;
+    }
+
+
+        // print move (for UCI purposes)
+    void print_move(int move)
+    {   
+
+        if (get_move_promoted(move)){
+            cout << coordinates[get_move_source(move)]
+            << coordinates[get_move_target(move)]
+            << promoted_pieces[get_move_promoted(move)]
+            << endl;
+        }
+        else{
+            cout << coordinates[get_move_source(move)]
+            << coordinates[get_move_target(move)]
+            << endl;
+        }
+
+    
+    }
+
+
+    // print move list
+    void print_move_list(moves *move_list)
+    {
+        // if moves list is empty
+        if (!move_list->count)
+        {
+            cout << "\n\n    No move in the list moves \n\n";
+            return;
+        }
+        cout << "\n    Move    Piece   Capture   Double    Enpass    Castling\n\n";
+
+        
+        // loop over moves within a move list
+        for (int move_count = 0; move_count < move_list->count; move_count++)
+        {
+            // init move
+            int move = move_list->moves[move_count];
+            
+            cout << "    "
+            << coordinates[get_move_source(move)]
+            << coordinates[get_move_target(move)]
+            << (get_move_promoted(move) ? promoted_pieces[get_move_promoted(move)] : ' ')<< "    "
+            << ascii_pieces[get_move_piece(move)] << "        "
+            << (get_move_capture(move) ? 1 : 0) << "          "
+            << (get_move_double(move) ? 1 : 0) << "           "
+            << (get_move_enpassant(move) ? 1 : 0) << "         "
+            << (get_move_castling(move) ? 1 : 0)
+            << endl;
+
+
+        }
+        // print total number of moves
+        cout << "\n\n                   Total number of moves: " << move_list->count << "\n\n";
+    }
+
+    int get_time() // return time in milliseconds for debugging and testing purposes 
+    {
+        // get time in milliseconds
+        return GetTickCount();
+    }
+    // preserve board state
     // preserve board state
     #define copy_board()                                                      \
+        U64 bitboards_copy[12], occupancies_copy[3];                          \
+        int side_copy, enpassant_copy, castle_copy;                           \
         memcpy(bitboards_copy, bitboards, 96);                                \
         memcpy(occupancies_copy, occupancies, 24);                            \
         side_copy = side, enpassant_copy = enpassant, castle_copy = castle;   \
@@ -1346,7 +1422,7 @@
                 // erase the pawn depending on side to move
                 (side == white) ? remove_bit(bitboards[p], target_square + 8) :
                                   remove_bit(bitboards[P], target_square - 8);
-            }
+            }   
 
             //reset enpassant square 
             enpassant = no_sq;
@@ -1354,7 +1430,7 @@
             // handle double push
             if (double_push)
             {
-                (side==white) ? enpassant = target_square + 8 : enpassant = target_square - 8;
+                (side==white) ? (enpassant = target_square + 8) : (enpassant = target_square - 8);
             }
 
             // handle castling
@@ -1387,7 +1463,8 @@
             castle &= castling_rights[target_square];
 
             //update occupancies
-            memset(occupancies, 0ULL, 24);
+            memset(occupancies, 0ULL, sizeof(occupancies)); // clear occupancies
+            
             for(int bb_piece = P; bb_piece <= K; bb_piece++) // for white pieces
             {
                 occupancies[white] |= bitboards[bb_piece];
@@ -1444,7 +1521,7 @@
         U64 attacks;
 
         // loop over all pieces on board
-        for (int piece = P; piece <=k ; piece++)
+        for (int piece = P ; piece <= k ; piece++)
         {
             // init copy biboard
             bitboard = bitboards[piece];
@@ -1540,7 +1617,7 @@
                         if (!get_bit(occupancies[both], f1) && !get_bit(occupancies[both], g1))
                         {
                             // make sure king and the f1 squares are not under attacks
-                            if (!isSquare_attacked(e1, black) && !isSquare_attacked(f1, black))
+                            if (!isSquare_attacked(e1, black) && !isSquare_attacked(f1, black) && !isSquare_attacked(g1, black))
                                 add_move(move_list, encode_move(e1, g1, piece, 0, 0, 0, 0, 1));
                         }
                     }
@@ -1552,7 +1629,7 @@
                         if (!get_bit(occupancies[both], d1) && !get_bit(occupancies[both], c1) && !get_bit(occupancies[both], b1))
                         {
                             // make sure king and the d1 squares are not under attacks
-                            if (!isSquare_attacked(e1, black) && !isSquare_attacked(d1, black))
+                            if (!isSquare_attacked(e1, black) && !isSquare_attacked(d1, black) && !isSquare_attacked(c1, black))
                                 add_move(move_list, encode_move(e1, c1, piece, 0, 0, 0, 0, 1));
                         }
                     }
@@ -1649,7 +1726,7 @@
                             if (!get_bit(occupancies[both], f8) && !get_bit(occupancies[both], g8))
                             {
                                 // make sure king and the f8 squares are not under attacks
-                                if (!isSquare_attacked(e8, white) && !isSquare_attacked(f8, white))
+                                if (!isSquare_attacked(e8, white) && !isSquare_attacked(f8, white) && !isSquare_attacked(g8, white))
                                     add_move(move_list, encode_move(e8, g8, piece, 0, 0, 0, 0, 1));
                             }
                         }
@@ -1661,7 +1738,7 @@
                             if (!get_bit(occupancies[both], d8) && !get_bit(occupancies[both], c8) && !get_bit(occupancies[both], b8))
                             {
                                 // make sure king and the d8 squares are not under attacks
-                                if (!isSquare_attacked(e8, white) && !isSquare_attacked(d8, white))
+                                if (!isSquare_attacked(e8, white) && !isSquare_attacked(d8, white) && !isSquare_attacked(c8, white))
                                     add_move(move_list, encode_move(e8, c8, piece, 0, 0, 0, 0, 1));
                             }
                         }
@@ -1868,61 +1945,8 @@
         0100 0000 0000 0000 0000 0000    enpassant flag      0x400000
         1000 0000 0000 0000 0000 0000    castling flag       0x800000
     */
-
-
-
-
-
-    // print move (for UCI purposes)
-    void print_move(int move)
-    {
-        cout << coordinates[get_move_source(move)]
-        << coordinates[get_move_target(move)]
-        << promoted_pieces[get_move_promoted(move)]
-        << endl;
-    }
-
-
-    // print move list
-    void print_move_list(moves *move_list)
-    {
-        // if moves list is empty
-        if (!move_list->count)
-        {
-            cout << "\n\n    No move in the list moves \n\n";
-            return;
-        }
-        cout << "\n    Move    Piece   Capture   Double    Enpass    Castling\n\n";
-
-        
-        // loop over moves within a move list
-        for (int move_count = 0; move_count < move_list->count; move_count++)
-        {
-            // init move
-            int move = move_list->moves[move_count];
-            
-            cout << "    "
-            << coordinates[get_move_source(move)]
-            << coordinates[get_move_target(move)]
-            << (get_move_promoted(move) ? promoted_pieces[get_move_promoted(move)] : ' ')<< "    "
-            << ascii_pieces[get_move_piece(move)] << "        "
-            << (get_move_capture(move) ? 1 : 0) << "          "
-            << (get_move_double(move) ? 1 : 0) << "           "
-            << (get_move_enpassant(move) ? 1 : 0) << "         "
-            << (get_move_castling(move) ? 1 : 0)
-            << endl;
-
-
-        }
-        // print total number of moves
-        cout << "\n\n                   Total number of moves: " << move_list->count << "\n\n";
-    }
-
-    int get_time() // return time in milliseconds for debugging and testing purposes 
-    {
-        // get time in milliseconds
-        return GetTickCount();
-    }
+    
+    
     // leaf nodes (number of positions reached during the test of the move generator at a given depth)
     long nodes;
 
@@ -1951,9 +1975,10 @@
             
             // make move
             if (!make_move(move_list->moves[move_count], all_moves))
-                // skip to the next move
+            {  
+            // skip to the next move
                 continue;
-            
+            }
             // call perft driver recursively
             perft_driver(depth - 1);
             
@@ -1962,6 +1987,57 @@
         }
     }
 
+    // perft test
+    void perft_test(int depth)
+    {
+        cout << "   Performance Test \n\n"; 
+        // create move list instance
+        moves move_list[1];
+        
+        // generate moves
+        generate_moves(move_list);
+        
+        long start_time = get_time(); 
+
+        // loop over generated moves
+        for (int move_count = 0; move_count < move_list->count; move_count++)
+        {   
+            // preserve board state
+            copy_board();
+            
+            // make move
+            if (!make_move(move_list->moves[move_count], all_moves))
+            {  
+            // skip to the next move
+                continue;
+            }
+
+            //cummulative nodes
+            long cummulative = nodes;
+
+            // call perft driver recursively
+            perft_driver(depth - 1);
+
+            //old nodes count
+            long old_nodes = nodes - cummulative;
+            
+            // take back
+            take_back();
+
+            //print move
+            cout << "     move: "
+            << coordinates[get_move_source(move_list->moves[move_count])]
+            << coordinates[get_move_target(move_list->moves[move_count])]
+            << (get_move_promoted(move_list->moves[move_count]) ? promoted_pieces[get_move_promoted(move_list->moves[move_count])] : ' ')
+            << "  nodes: " << old_nodes << endl;
+
+        }
+        //print results
+        cout <<"\n     Depth: " << depth << endl;
+        cout << "     Nodes: " << nodes << endl;
+        cout << "     Time: " << get_time()-start_time << " ms" << endl;
+    }
+    
 
 
     int main()
@@ -1970,18 +2046,18 @@
         init_all();
         
         // parse fen
-        parse_fen(tricky_position);
+        parse_fen(start_position);
         print_board();
 
         // start tracking time
         int start = get_time();
 
         // perft
-        perft_driver(1);
-
-        //time taken to generate moves
-        cout << "\n\nTime taken to generate moves: " << get_time() - start << " ms\n\n";
-        cout << "Total number of positions reached: " << nodes << "\n\n";
+        perft_test(6);
+            
+        // time taken to execute program
+        printf("\n\ntime taken to execute: %d ms\n", get_time() - start);
+        printf("nodes: %ld\n", nodes);
             
         return 0;   
     }
