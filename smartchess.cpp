@@ -1349,7 +1349,21 @@
         13, 15, 15, 15, 12, 15, 15, 14
     };
 
-
+/* This will be used to extract information for a specifific move
+            binary move bits                               hexidecimal constants
+        
+        0000 0000 0000 0000 0011 1111    source square       0x3f
+        0000 0000 0000 1111 1100 0000    target square       0xfc0
+        0000 0000 1111 0000 0000 0000    piece               0xf000
+        0000 1111 0000 0000 0000 0000    promoted piece      0xf0000
+        0001 0000 0000 0000 0000 0000    capture flag        0x100000
+        0010 0000 0000 0000 0000 0000    double push flag    0x200000
+        0100 0000 0000 0000 0000 0000    enpassant flag      0x400000
+        1000 0000 0000 0000 0000 0000    castling flag       0x800000
+    */
+    
+    
+    // leaf nodes (number of positions reached during the test of the move generator at a given depth)
 
     // move types
     enum { all_moves, only_captures };
@@ -1933,21 +1947,140 @@
     }
 
 
-    /* This will be used to extract information for a specifific move
-            binary move bits                               hexidecimal constants
+
+    int material_score[12] = {
+        100, 300, 350, 500, 1000, 10000, // white pieces
+        -100, -300, -350, -500, -1000, -10000 // black pieces
+    };
+    // pawn positional score
+    const int pawn_score[64] = 
+    {
+        90,  90,  90,  90,  90,  90,  90,  90,
+        30,  30,  30,  40,  40,  30,  30,  30,
+        20,  20,  20,  30,  30,  30,  20,  20,
+        10,  10,  10,  20,  20,  10,  10,  10,
+        5,   5,  10,  20,  20,   5,   5,   5,
+        0,   0,   0,   5,   5,   0,   0,   0,
+        0,   0,   0, -10, -10,   0,   0,   0,
+        0,   0,   0,   0,   0,   0,   0,   0
+    };
+
+    // knight positional score
+    const int knight_score[64] = 
+    {
+        -5,   0,   0,   0,   0,   0,   0,  -5,
+        -5,   0,   0,  10,  10,   0,   0,  -5,
+        -5,   5,  20,  20,  20,  20,   5,  -5,
+        -5,  10,  20,  30,  30,  20,  10,  -5,
+        -5,  10,  20,  30,  30,  20,  10,  -5,
+        -5,   5,  20,  10,  10,  20,   5,  -5,
+        -5,   0,   0,   0,   0,   0,   0,  -5,
+        -5, -10,   0,   0,   0,   0, -10,  -5
+    };
+
+    // bishop positional score
+    const int bishop_score[64] = 
+    {
+        0,   0,   0,   0,   0,   0,   0,   0,
+        0,   0,   0,   0,   0,   0,   0,   0,
+        0,   0,   0,  10,  10,   0,   0,   0,
+        0,   0,  10,  20,  20,  10,   0,   0,
+        0,   0,  10,  20,  20,  10,   0,   0,
+        0,  10,   0,   0,   0,   0,  10,   0,
+        0,  30,   0,   0,   0,   0,  30,   0,
+        0,   0, -10,   0,   0, -10,   0,   0
+
+    };
+
+    // rook positional score
+    const int rook_score[64] =
+    {
+        50,  50,  50,  50,  50,  50,  50,  50,
+        50,  50,  50,  50,  50,  50,  50,  50,
+        0,   0,  10,  20,  20,  10,   0,   0,
+        0,   0,  10,  20,  20,  10,   0,   0,
+        0,   0,  10,  20,  20,  10,   0,   0,
+        0,   0,  10,  20,  20,  10,   0,   0,
+        0,   0,  10,  20,  20,  10,   0,   0,
+        0,   0,   0,  20,  20,   0,   0,   0
+
+    };
+
+    // king positional score
+    const int king_score[64] = 
+    {
+        0,   0,   0,   0,   0,   0,   0,   0,
+        0,   0,   5,   5,   5,   5,   0,   0,
+        0,   5,   5,  10,  10,   5,   5,   0,
+        0,   5,  10,  20,  20,  10,   5,   0,
+        0,   5,  10,  20,  20,  10,   5,   0,
+        0,   0,   5,  10,  10,   5,   0,   0,
+        0,   5,   5,  -5,  -5,   0,   5,   0,
+        0,   0,   5,   0, -15,   0,  10,   0
+    };
+
+    // mirror positional score tables for opposite side
+    const int mirror_score[128] =
+    {
+        a1, b1, c1, d1, e1, f1, g1, h1,
+        a2, b2, c2, d2, e2, f2, g2, h2,
+        a3, b3, c3, d3, e3, f3, g3, h3,
+        a4, b4, c4, d4, e4, f4, g4, h4,
+        a5, b5, c5, d5, e5, f5, g5, h5,
+        a6, b6, c6, d6, e6, f6, g6, h6,
+        a7, b7, c7, d7, e7, f7, g7, h7,
+        a8, b8, c8, d8, e8, f8, g8, h8
+    };
+
+    static inline int evaluate_position()
+    {
+        // init score
+        int score = 0;
         
-        0000 0000 0000 0000 0011 1111    source square       0x3f
-        0000 0000 0000 1111 1100 0000    target square       0xfc0
-        0000 0000 1111 0000 0000 0000    piece               0xf000
-        0000 1111 0000 0000 0000 0000    promoted piece      0xf0000
-        0001 0000 0000 0000 0000 0000    capture flag        0x100000
-        0010 0000 0000 0000 0000 0000    double push flag    0x200000
-        0100 0000 0000 0000 0000 0000    enpassant flag      0x400000
-        1000 0000 0000 0000 0000 0000    castling flag       0x800000
-    */
-    
-    
-    // leaf nodes (number of positions reached during the test of the move generator at a given depth)
+        U64 bitboard;
+        int square, piece;
+        for(int bb_piece = P; bb_piece <= k; bb_piece++)
+        {
+            // init copy bitboard
+            bitboard = bitboards[bb_piece];
+            
+            // loop over pieces within the bitboard
+            while (bitboard)
+            {
+                piece = bb_piece; // get piece index 
+                // get square of the piece
+                square = get_least_bit(bitboard);
+                
+                // add material score to the position score
+                score += material_score[piece];
+                switch(piece)
+                {
+                    //for white pieces
+                    case P : score += pawn_score[square]; break;
+                    case N : score += knight_score[square]; break;
+                    case B : score += bishop_score[square]; break;
+                    case R : score += rook_score[square]; break;
+                    case K : score += king_score[square]; break;
+                    
+                    //for black pieces
+                    case p : score -= pawn_score[mirror_score[square]]; break;
+                    case n : score -= knight_score[mirror_score[square]]; break;
+                    case b : score -= bishop_score[mirror_score[square]]; break;
+                    case r : score -= rook_score[mirror_score[square]]; break;
+                    case k : score -= king_score[mirror_score[square]]; break;
+                }
+                
+                // pop ls1b from the current piece bitboard copy
+                remove_bit(bitboard, square);
+            }
+        }
+        return (side == white) ? score : -score; // flip score if black to move
+    }
+/****************************************/
+
+                //PERFT//
+
+/****************************************/
     long nodes;
 
     // perft driver
@@ -2037,27 +2170,204 @@
         cout << "     Nodes: " << nodes << endl;
         cout << "     Time: " << get_time()-start_time << " ms" << endl;
     }
+
+
+/****************************************/
+
+                //SEARCH//
+
+/****************************************/
+
+void search_position(int depth)
+{
+    cout << "BEST MOVE: " << "e2e4" << endl; // placeholder for best move
+}
+
+/****************************************/
+
+                //UCI//
+
+/****************************************/
+    int parse_move(string move_string)
+    {
+        moves move_list[1];
+        generate_moves(move_list); 
+
+        int source_squarre = (move_string[0] - 'a') + (8 -(move_string[1]- '0')) * 8;
+        int target_square = (move_string[2] - 'a') + (8 - (move_string[3]- '0')) * 8;
+        for(int move_count= 0 ; move_count< move_list->count ; move_count++)
+        {
+            int move = move_list->moves[move_count];
+
+                // if move is found
+                if(source_squarre==get_move_source(move) && target_square==get_move_target(move))
+                {
+                    int promoted_piece = get_move_promoted(move); 
+                    if(promoted_piece)  
+                    {              
+
+                             if((promoted_piece== Q || promoted_piece== q) && move_string[4] == 'q')
+                            {
+                                return move;
+                            }
+
+                            else if((promoted_piece== R || promoted_piece== r) && move_string[4] == 'r')
+                            {
+                                return move;
+                            }
+                            else if((promoted_piece== B || promoted_piece== b) && move_string[4] == 'b')
+                            {
+                                return move;
+                            }
+                            else if((promoted_piece== N || promoted_piece== n ) && move_string[4] == 'n')
+                            {
+                                return move;
+                            }
+
+                            continue;
+
+                        }
+                    return move;
     
+                }
+        }
+        return 0;
+    }
+
+    //parse a uci position command (ex: posistion startpos or position fen ...) and moves to be made
+    void parse_position(const char* command)
+    {
+        command += 9; // skip "position "
+        const char *current = command;
+        if(strncmp(command, "startpos", 8) == 0)
+        {
+            parse_fen(start_position);
+        }
+        else if(strncmp(command, "fen", 3) == 0)
+        {
+            if(current== NULL)
+            {
+                parse_fen(start_position);
+            }
+            else{ 
+                current += 4; // skip "fen "
+                parse_fen(current);}
+        }
+        // parsing moves
+        current = strstr(command, "moves ");
+        if(current != NULL)
+        {
+            current += 6; // skip "moves "
+            while(*current)
+            {
+                // parse move string
+                string move_string = string(current, 4);
+                int move = parse_move(move_string);
+                if(move == 0)
+                {
+                    cout << "\n\n Illegal move: " << move_string << endl;
+                    break;
+                }
+                // make move
+                make_move(move, all_moves);
+                while (*current && *current != ' ')
+                {
+                    current++;
+                }
+                current++;
+                
+            }
+
+        }
+        print_board(); // print board after parsing moves
+
+    }
+
+    // parse UCI go command which is used to start the engine to a specifc depth
+    void parse_go(const char* command)
+    {
+        //init depth
+        int depth = -1;
+        const char* current_depth=NULL;
+        // handle fixed depth   
+        if(current_depth= strstr(command, "depth "))
+        {
+            depth = atoi(current_depth + 6 );
+        }
+        else 
+            depth=6; // default depth
+        search_position(depth);
+    }
+
+    // main loop in UCI
+    void uci_loop()
+    {
+        setbuf(stdout, NULL); // disable output buffering*
+        // set input buffe
+        setbuf(stdin, NULL); // disable input buffering*
+        char input[2000];
+        
+        //print engine info
+        cout << "id name SmartChess 0.1" << endl;
+        cout << "id author Mohamed Ayham" << endl;
+
+        //main loop
+        while(1)
+        {
+           memset(input, 0, sizeof(input)); // clear input buffer
+
+           fflush(stdout); // flush output buffer
+
+           if(!fgets(input,2000 ,stdin)) continue; // read input
+           
+           if(input[0] == '\n') continue; // skip empty lines
+
+           if(strncmp(input, "isready", 7) ==0) // make sure engine is ready
+           {
+                cout << "readyok" << endl;
+                continue;
+           }
+           else if(strncmp(input, "position", 8) ==0) // parse position command
+           {
+                parse_position(input);
+           }
+           else if(strncmp(input, "ucinewgame", 10) ==0)
+           {
+                parse_position("position startpos");
+           }
+           else if(strncmp(input, "go", 2)==0)
+           {
+                parse_go(input);
+           }
+           else if(strncmp(input, "quit", 4)==0)
+           {
+                break;
+           }
+           else if(strncmp(input, "uci", 3)==0)
+           {
+            cout << "id name SmartChess 0.1" << endl;
+            cout << "id author Mohamed Ayham" << endl;                
+           }        
+        }
+        
+    }    
 
 
     int main()
     {
         // init all
         init_all();
-        
-        // parse fen
-        parse_fen(start_position);
-        print_board();
+        int debug = 1;
+        if(debug)
+        {
+            parse_fen("rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 1 "); // parse start position
+            print_board(); // print board   
+            cout << "Material score: " << evaluate_position() << endl; // print material score
+        }
+        else 
+            uci_loop(); // start uci loop
 
-        // start tracking time
-        int start = get_time();
 
-        // perft
-        perft_test(6);
-            
-        // time taken to execute program
-        printf("\n\ntime taken to execute: %d ms\n", get_time() - start);
-        printf("nodes: %ld\n", nodes);
-            
+
         return 0;   
     }
