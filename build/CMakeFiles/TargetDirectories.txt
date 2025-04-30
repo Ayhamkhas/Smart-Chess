@@ -1,0 +1,3 @@
+C:/Users/jlass/Smart Chess/Smart-Chess/build/CMakeFiles/SmartChess.dir
+C:/Users/jlass/Smart Chess/Smart-Chess/build/CMakeFiles/edit_cache.dir
+C:/Users/jlass/Smart Chess/Smart-Chess/build/CMakeFiles/rebuild_cache.dir

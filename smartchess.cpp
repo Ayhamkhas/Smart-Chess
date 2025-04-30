@@ -1268,13 +1268,12 @@
         if (get_move_promoted(move)){
             cout << coordinates[get_move_source(move)]
             << coordinates[get_move_target(move)]
-            << promoted_pieces[get_move_promoted(move)]
-            << endl;
+            << promoted_pieces[get_move_promoted(move)];
         }
         else{
             cout << coordinates[get_move_source(move)]
-            << coordinates[get_move_target(move)]
-            << endl;
+            << coordinates[get_move_target(move)];
+
         }
 
     
@@ -1363,7 +1362,6 @@
     */
     
     
-    // leaf nodes (number of positions reached during the test of the move generator at a given depth)
 
     // move types
     enum { all_moves, only_captures };
@@ -2081,10 +2079,12 @@
                 //PERFT//
 
 /****************************************/
+ 
+// leaf nodes (number of positions reached during the test of the move generator at a given depth)
     long nodes;
 
     // perft driver
-    static inline void perft_driver(int depth)
+static inline void perft_driver(int depth)
     {
         // reccursion escape condition
         if (depth == 0)
@@ -2121,7 +2121,7 @@
     }
 
     // perft test
-    void perft_test(int depth)
+void perft_test(int depth)
     {
         cout << "   Performance Test \n\n"; 
         // create move list instance
@@ -2178,9 +2178,120 @@
 
 /****************************************/
 
-void search_position(int depth)
+// half move counter
+int ply;
+
+//best move 
+int best_move;
+
+//negamax alpha beta search
+static inline int negamax(int alpha, int beta, int depth)
 {
-    cout << "BEST MOVE: " << "e2e4" << endl; // placeholder for best move
+    //escape condition
+    if (depth == 0)
+        // return evaluation
+        return evaluate_position();
+    
+    //increment nodes count
+    nodes++;
+
+    // check for king checks
+    int king_in_check = isSquare_attacked((side == white) ? get_least_bit(bitboards[K]) : get_least_bit(bitboards[k]), side ^ 1);
+
+    int legal_moves = 0; // legal moves count 
+
+    //best so far (temporarily for now)
+    int best_so_far;
+
+    //old aplha
+    int old_alpha = alpha;
+
+    // create move list instance
+    moves move_list[1];
+
+    // generate moves
+    generate_moves(move_list);
+
+    // loop over generated moves
+    for(int count = 0; count< move_list->count; count++)
+    {
+        // preserve the board state 
+        copy_board();
+
+        // increment ply
+        ply++;
+
+        //make only legal moves
+        if(make_move(move_list->moves[count], all_moves) == 0)
+        {
+            // decrement ply
+            ply--;
+
+            continue;
+            
+        }
+
+        legal_moves++; // increment legal moves count
+
+        // call negamax recursively
+        int score = -negamax(-beta, -alpha, depth-1);
+
+        ply--; // decrement ply
+
+        // take back
+        take_back();
+
+        // fail-hard beta cutoff
+        if(score >= beta)
+        {
+            //node (move) fails high
+            return beta;
+        }
+            
+        // if a better move is found 
+        if(score > alpha)
+        {
+            // PV node (principal variation) found
+            alpha = score;
+
+            if(ply == 0)
+            {
+                // set best move
+                best_so_far = move_list->moves[count];
+            }
+        }
+    }
+
+    // if no legal moves are found
+    if(legal_moves == 0)
+    {
+        // check for king in check
+        if(king_in_check)
+            return -49000 + ply; // return checkmate
+        else
+            return 0; // return stalemate
+    }
+
+    if(old_alpha != alpha)
+    {
+        // set best move
+        best_move = best_so_far;
+    }
+    return alpha; // return move fails low
+}
+
+    void search_position(int depth)
+{
+    // find best move in a given position
+
+    int score = negamax(-50000 , 50000, depth);
+
+    if(best_move)
+    {
+        cout << "bestmove "; // placeholder for best move
+        print_move(best_move); // print best move
+        cout << "\n"; // new line
+    }    
 }
 
 /****************************************/
@@ -2243,33 +2354,40 @@ void search_position(int depth)
         {
             parse_fen(start_position);
         }
-        else if(strncmp(command, "fen", 3) == 0)
+        else 
         {
+            current= strstr(command, "fen");
+
             if(current== NULL)
             {
                 parse_fen(start_position);
             }
-            else{ 
+            else
+            {
                 current += 4; // skip "fen "
-                parse_fen(current);}
+                parse_fen(current);
+            }    
         }
+
         // parsing moves
-        current = strstr(command, "moves ");
+        current = strstr(command, "moves");
+
         if(current != NULL)
         {
             current += 6; // skip "moves "
             while(*current)
             {
                 // parse move string
-                string move_string = string(current, 4);
-                int move = parse_move(move_string);
+                int move = parse_move(current);
                 if(move == 0)
                 {
-                    cout << "\n\n Illegal move: " << move_string << endl;
+                    cout << "\n\n Illegal move: " << *current << endl;
                     break;
                 }
+                
                 // make move
                 make_move(move, all_moves);
+
                 while (*current && *current != ' ')
                 {
                     current++;
@@ -2290,7 +2408,7 @@ void search_position(int depth)
         int depth = -1;
         const char* current_depth=NULL;
         // handle fixed depth   
-        if(current_depth= strstr(command, "depth "))
+        if(current_depth= strstr(command, "depth"))
         {
             depth = atoi(current_depth + 6 );
         }
@@ -2324,7 +2442,7 @@ void search_position(int depth)
 
            if(strncmp(input, "isready", 7) ==0) // make sure engine is ready
            {
-                cout << "readyok" << endl;
+                cout << "readyok\n"; // send readyok response
                 continue;
            }
            else if(strncmp(input, "position", 8) ==0) // parse position command
@@ -2345,29 +2463,76 @@ void search_position(int depth)
            }
            else if(strncmp(input, "uci", 3)==0)
            {
-            cout << "id name SmartChess 0.1" << endl;
-            cout << "id author Mohamed Ayham" << endl;                
+            cout << "id name SmartChess 0.1\n";
+            cout << "id author Mohamed Ayham\n";
+            cout << "uciok\n";                
            }        
         }
         
     }    
+
+// analysis 
+    void analyze_negamax_performance(const vector<string>& fens, int depth, const string& output_file)
+    {
+        ofstream log(output_file);
+        log << "FEN,Depth,Nodes,Time(ms),NPS,BestMove,EvalScore\n";
+
+        for (const auto& fen : fens)
+        {
+            parse_fen(fen.c_str());
+
+            nodes = 0; // reset node counter
+            auto start = chrono::high_resolution_clock::now();
+            int score = negamax(-50000, 50000, depth);
+            auto end = chrono::high_resolution_clock::now();
+
+            long ms = chrono::duration_cast<chrono::milliseconds>(end - start).count();
+            double nps = ms > 0 ? (nodes * 1000.0 / ms) : 0.0;
+
+            // get move in UCI format
+            string best_move_str;
+            {
+                int move = best_move;
+                best_move_str = coordinates[get_move_source(move)];
+                best_move_str += coordinates[get_move_target(move)];
+                if (get_move_promoted(move))
+                    best_move_str += tolower(promoted_pieces[get_move_promoted(move)]);
+            }
+
+            log << '"' << fen << '"' << ','
+                << depth << ','
+                << nodes << ','
+                << ms << ','
+                << (int)nps << ','
+                << best_move_str << ','
+                << score << '\n';
+        }
+
+        log.close();
+        cout << "Analysis written to: " << output_file << endl;
+    }
+
 
 
     int main()
     {
         // init all
         init_all();
-        int debug = 1;
+        int debug = 0;
         if(debug)
         {
-            parse_fen("rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 1 "); // parse start position
+            parse_fen(tricky_position); // parse start position
             print_board(); // print board   
-            cout << "Material score: " << evaluate_position() << endl; // print material score
+            search_position(3); // search position to a depth of 4
         }
         else 
             uci_loop(); // start uci loop
-
-
+        
+        vector<string> fens = {
+        start_position,
+        tricky_position,
+        killer_position
+        };    
 
         return 0;   
     }
