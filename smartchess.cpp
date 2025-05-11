@@ -2212,11 +2212,118 @@ static int mvv_lva[12][12] = {
    100, 200, 300, 400, 500, 600,  100, 200, 300, 400, 500, 600
 };
 
+
+
+int killer_moves[2][64];
+int history_moves[12][64];
+
+int pv_length[64];
+int pv_table[64][64];
+
 // half move counter
 int ply;
 
-//best move 
-int best_move;
+
+// score moves
+static inline int score_move(int move)
+{
+    // score capture move
+    if (get_move_capture(move))
+    {
+        // init target piece
+        int target_piece = P;
+        
+        // pick up bitboard piece index ranges depending on side
+        int start_piece, end_piece;
+        
+        // pick up side to move
+        if (side == white) { start_piece = p; end_piece = k; }
+        else { start_piece = P; end_piece = K; }
+        
+        // loop over bitboards opposite to the current side to move
+        for (int bb_piece = start_piece; bb_piece <= end_piece; bb_piece++)
+        {
+            // if there's a piece on the target square
+            if (get_bit(bitboards[bb_piece], get_move_target(move)))
+            {
+                // remove it from corresponding bitboard
+                target_piece = bb_piece;
+                break;
+            }
+        }
+                
+        // score move by MVV LVA lookup [source piece][target piece]
+        return mvv_lva[get_move_piece(move)][target_piece] + 10000;
+    }
+    
+    // score quiet move
+    else
+    {
+        //score first killer move
+        if (killer_moves[0][ply] == move)
+            return 9000;
+
+        //score second killer move 
+        else if (killer_moves[1][ply] == move)
+            return 8000;
+        
+        // score history move
+        else 
+            return history_moves[get_move_piece(move)][get_move_target(move)];
+    }
+    
+    return 0;
+}
+
+
+void sort_moves(moves *move_list)
+{
+    int move_scores[move_list->count];
+
+    // loop over moves within a move list
+    for (int count = 0; count < move_list->count; count++)
+    {
+        // score move
+        move_scores[count] = score_move(move_list->moves[count]);
+    }
+
+    // loop over current move within a move list
+    for (int current_move = 0; current_move < move_list->count; current_move++)
+    {
+        // loop over next move within a move list
+        for (int next_move = current_move + 1; next_move < move_list->count; next_move++)
+        {
+            // compare current and next move scores
+            if (move_scores[current_move] < move_scores[next_move])
+            {
+                // swap scores
+                int temp_score = move_scores[current_move];
+                move_scores[current_move] = move_scores[next_move];
+                move_scores[next_move] = temp_score;
+                
+                // swap moves
+                int temp_move = move_list->moves[current_move];
+                move_list->moves[current_move] = move_list->moves[next_move];
+                move_list->moves[next_move] = temp_move;
+            }
+        }
+    }    
+}
+
+// print move scores
+void print_move_scores(moves *move_list)
+{
+    cout <<"     Move scores:\n\n";
+        
+    // loop over moves within a move list
+    for (int count = 0; count < move_list->count; count++)
+    {
+        cout <<"     move: ";
+        print_move(move_list->moves[count]);
+        cout <<" score: " << score_move(move_list->moves[count])<< endl;
+    }
+}
+
 
 static inline int quiescence(int alpha, int beta)
 {
@@ -2243,6 +2350,9 @@ static inline int quiescence(int alpha, int beta)
 
     // generate moves
     generate_moves(move_list);
+
+    // sort moves
+    sort_moves(move_list);
 
     // loop over generated moves
     for(int count = 0; count< move_list->count; count++)
@@ -2293,11 +2403,10 @@ static inline int quiescence(int alpha, int beta)
 }
 
 
-
-
 //negamax alpha beta search
 static inline int negamax(int alpha, int beta, int depth)
 {
+    pv_length[ply] = ply; // set pv length
     //escape condition
     if (depth == 0)
         // return evaluation
@@ -2308,20 +2417,21 @@ static inline int negamax(int alpha, int beta, int depth)
 
     // check for king checks
     int king_in_check = isSquare_attacked((side == white) ? get_least_bit(bitboards[K]) : get_least_bit(bitboards[k]), side ^ 1);
+    if(king_in_check)
+    {
+        depth++;
+    }
 
     int legal_moves = 0; // legal moves count 
-
-    //best so far (temporarily for now)
-    int best_so_far;
-
-    //old aplha
-    int old_alpha = alpha;
 
     // create move list instance
     moves move_list[1];
 
     // generate moves
     generate_moves(move_list);
+
+    // sort moves
+    sort_moves(move_list);
 
     // loop over generated moves
     for(int count = 0; count< move_list->count; count++)
@@ -2355,6 +2465,13 @@ static inline int negamax(int alpha, int beta, int depth)
         // fail-hard beta cutoff
         if(score >= beta)
         {
+            // on quiet moves
+            if(!get_move_capture(move_list->moves[count]))
+            {
+                // store killer moves
+                killer_moves[1][ply] = killer_moves[0][ply];
+                killer_moves[0][ply] = move_list->moves[count];
+            }    
             //node (move) fails high
             return beta;
         }
@@ -2362,14 +2479,24 @@ static inline int negamax(int alpha, int beta, int depth)
         // if a better move is found 
         if(score > alpha)
         {
+            if(!get_move_capture(move_list->moves[count]))
+            {
+                //strore history moves
+                history_moves[get_move_piece(move_list->moves[count])][get_move_target(move_list->moves[count])] += depth;
+            }    
+
             // PV node (principal variation) found
             alpha = score;
 
-            if(ply == 0)
+            pv_table[ply][ply] = move_list->moves[count]; // set principal variation
+
+            // loop over next moves
+            for(int next_ply = ply + 1; next_ply < pv_length[ply + 1]; next_ply++)
             {
-                // set best move
-                best_so_far = move_list->moves[count];
+                pv_table[ply][next_ply] = pv_table[ply + 1][next_ply];
             }
+
+            pv_length[ply] = pv_length[ply + 1]; // set pv length
         }
     }
 
@@ -2385,11 +2512,6 @@ static inline int negamax(int alpha, int beta, int depth)
             return 0; // return stalemate
     }
 
-    if(old_alpha != alpha)
-    {
-        // set best move
-        best_move = best_so_far;
-    }
     return alpha; // return move fails low
 }
 
@@ -2400,14 +2522,19 @@ void search_position(int depth)
 
     int score = negamax(-50000 , 50000, depth);
 
-    if(best_move)
-    {
-        cout << "info score cp " << score << " depth " << depth << " nodes " << nodes << endl;
+        cout << "info depth " << depth << " score cp " << score << " nodes " << nodes << " pv ";
 
-        cout << "bestmove "; // placeholder for best move
-        print_move(best_move); // print best move
-        cout << "\n"; // new line
-    }    
+    for(int count=0; count< pv_length[0]; count++)
+    {
+        // print principal variation
+        print_move(pv_table[0][count]);
+        cout << " ";
+    }
+    cout << "\n"; // new line
+
+    cout << "bestmove "; // placeholder for best move
+    print_move(pv_table[0][0]); // print best move
+    cout << "\n"; // new line  
 }
 
 /****************************************/
@@ -2608,7 +2735,7 @@ void search_position(int depth)
             // get move in UCI format
             string best_move_str;
             {
-                int move = best_move;
+                int move = pv_table[0][0];
                 best_move_str = coordinates[get_move_source(move)];
                 best_move_str += coordinates[get_move_target(move)];
                 if (get_move_promoted(move))
@@ -2634,23 +2761,26 @@ void search_position(int depth)
     {
         // init all
         init_all();
-        int debug = 1;
+        int debug = 0;
         if(debug)
         {
-            parse_fen(cmk_position); // parse start position
+            parse_fen(start_position); // parse start position
             print_board(); // print board   
-            //search_position(3); // search position to a depth of 4
-            cout << "Move Score: "<< mvv_lva[P][k] << endl;
-            cout << "Move Score: "<< mvv_lva[Q][p] << endl;
+            search_position(5); // search position to a depth of 4
+
+            //moves move_list[1];
+
+            //generate_moves(move_list); // generate moves
+
+            //sort_moves(move_list); // sort moves
+
+            //print_move_scores(move_list); // print move scores
         }
+
         else 
             uci_loop(); // start uci loop
         
-        vector<string> fens = {
-        start_position,
-        tricky_position,
-        killer_position
-        };    
+ 
 
         return 0;   
     }
