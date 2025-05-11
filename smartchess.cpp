@@ -31,6 +31,8 @@
     #include <bits/stdc++.h>
     #include <unordered_map>
     #include <windows.h>
+    #include <fstream>
+    #include <chrono>
 
 
     using namespace std; 
@@ -41,7 +43,7 @@
     const char* start_position = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 ";
     const char* tricky_position = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ";
     const char* killer_position = "rnbqkb1r/pp1p1pPp/8/2p1pP2/1P1P4/3P3P/P1P1P3/RNBQKBNR w KQkq e6 0 1";
-    const char* cmk_position = "r2q1rk1/ppp2ppp/2n1bn2/2b1p3/3pP3/3P1NPP/PPP1NPB1/R1BQ1RK1 w - - 0 9 ";
+    const char* cmk_position = "r2q1rk1/ppp2ppp/2n1bn2/2b1p3/3pP3/3P1NPP/PPP1NPB1/R1BQ1RK1 b - - 0 9 ";
 
 
     #define U64 unsigned long long // for bitbaord data type definition, it's a 64 bit unsigned integered represented in binary
@@ -2084,7 +2086,7 @@
     long nodes;
 
     // perft driver
-static inline void perft_driver(int depth)
+    static inline void perft_driver(int depth)
     {
         // reccursion escape condition
         if (depth == 0)
@@ -2121,7 +2123,7 @@ static inline void perft_driver(int depth)
     }
 
     // perft test
-void perft_test(int depth)
+    void perft_test(int depth)
     {
         cout << "   Performance Test \n\n"; 
         // create move list instance
@@ -2178,11 +2180,120 @@ void perft_test(int depth)
 
 /****************************************/
 
+// most valuable victim & less valuable attacker
+
+/*
+                          
+    (Victims) Pawn Knight Bishop   Rook  Queen   King
+  (Attackers)
+        Pawn   105    205    305    405    505    605
+      Knight   104    204    304    404    504    604
+      Bishop   103    203    303    403    503    603
+        Rook   102    202    302    402    502    602
+       Queen   101    201    301    401    501    601
+        King   100    200    300    400    500    600
+
+*/
+
+// MVV LVA [attacker][victim]
+static int mvv_lva[12][12] = {
+    105, 205, 305, 405, 505, 605,  105, 205, 305, 405, 505, 605,
+   104, 204, 304, 404, 504, 604,  104, 204, 304, 404, 504, 604,
+   103, 203, 303, 403, 503, 603,  103, 203, 303, 403, 503, 603,
+   102, 202, 302, 402, 502, 602,  102, 202, 302, 402, 502, 602,
+   101, 201, 301, 401, 501, 601,  101, 201, 301, 401, 501, 601,
+   100, 200, 300, 400, 500, 600,  100, 200, 300, 400, 500, 600,
+
+   105, 205, 305, 405, 505, 605,  105, 205, 305, 405, 505, 605,
+   104, 204, 304, 404, 504, 604,  104, 204, 304, 404, 504, 604,
+   103, 203, 303, 403, 503, 603,  103, 203, 303, 403, 503, 603,
+   102, 202, 302, 402, 502, 602,  102, 202, 302, 402, 502, 602,
+   101, 201, 301, 401, 501, 601,  101, 201, 301, 401, 501, 601,
+   100, 200, 300, 400, 500, 600,  100, 200, 300, 400, 500, 600
+};
+
 // half move counter
 int ply;
 
 //best move 
 int best_move;
+
+static inline int quiescence(int alpha, int beta)
+{
+    nodes++; // increment nodes count
+
+    int eval = evaluate_position(); // evaluate position
+
+    // fail-hard beta cutoff
+    if(eval >= beta)
+    {
+        //node (move) fails high
+        return beta;
+    }
+        
+    // if a better move is found 
+    if(eval > alpha)
+    {
+        // PV node (principal variation) found
+        alpha = eval;
+
+    } 
+    // create move list instance
+    moves move_list[1];
+
+    // generate moves
+    generate_moves(move_list);
+
+    // loop over generated moves
+    for(int count = 0; count< move_list->count; count++)
+    {
+        // preserve the board state 
+        copy_board();
+
+        // increment ply
+        ply++;
+
+        //make only legal moves
+        if(make_move(move_list->moves[count], only_captures) == 0)
+        {
+            // decrement ply
+            ply--;
+
+            continue;
+            
+        }
+
+        // call negamax recursively
+        int score = -quiescence(-beta, -alpha);
+
+        ply--; // decrement ply
+
+        // take back
+        take_back();
+
+        // fail-hard beta cutoff
+        if(score >= beta)
+        {
+            //node (move) fails high
+            return beta;
+        }
+            
+        // if a better move is found 
+        if(score > alpha)
+        {
+            // PV node (principal variation) found
+            alpha = score;
+
+        } 
+    
+    }
+
+    return alpha; // return move fails low
+
+}
+
+
+
 
 //negamax alpha beta search
 static inline int negamax(int alpha, int beta, int depth)
@@ -2190,7 +2301,7 @@ static inline int negamax(int alpha, int beta, int depth)
     //escape condition
     if (depth == 0)
         // return evaluation
-        return evaluate_position();
+        return quiescence(alpha, beta);
     
     //increment nodes count
     nodes++;
@@ -2267,7 +2378,9 @@ static inline int negamax(int alpha, int beta, int depth)
     {
         // check for king in check
         if(king_in_check)
+
             return -49000 + ply; // return checkmate
+        
         else
             return 0; // return stalemate
     }
@@ -2280,7 +2393,8 @@ static inline int negamax(int alpha, int beta, int depth)
     return alpha; // return move fails low
 }
 
-    void search_position(int depth)
+
+void search_position(int depth)
 {
     // find best move in a given position
 
@@ -2288,6 +2402,8 @@ static inline int negamax(int alpha, int beta, int depth)
 
     if(best_move)
     {
+        cout << "info score cp " << score << " depth " << depth << " nodes " << nodes << endl;
+
         cout << "bestmove "; // placeholder for best move
         print_move(best_move); // print best move
         cout << "\n"; // new line
@@ -2518,12 +2634,14 @@ static inline int negamax(int alpha, int beta, int depth)
     {
         // init all
         init_all();
-        int debug = 0;
+        int debug = 1;
         if(debug)
         {
-            parse_fen(tricky_position); // parse start position
+            parse_fen(cmk_position); // parse start position
             print_board(); // print board   
-            search_position(3); // search position to a depth of 4
+            //search_position(3); // search position to a depth of 4
+            cout << "Move Score: "<< mvv_lva[P][k] << endl;
+            cout << "Move Score: "<< mvv_lva[Q][p] << endl;
         }
         else 
             uci_loop(); // start uci loop
