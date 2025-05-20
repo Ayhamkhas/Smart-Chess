@@ -2417,6 +2417,7 @@ static inline int negamax(int alpha, int beta, int depth)
 
     // check for king checks
     int king_in_check = isSquare_attacked((side == white) ? get_least_bit(bitboards[K]) : get_least_bit(bitboards[k]), side ^ 1);
+    
     if(king_in_check)
     {
         depth++;
@@ -2761,12 +2762,12 @@ void search_position(int depth)
     {
         // init all
         init_all();
-        int debug = 0;
+        int debug = 1;
         if(debug)
         {
             parse_fen(start_position); // parse start position
             print_board(); // print board   
-            search_position(5); // search position to a depth of 4
+            search_position(10); // search position to a depth of 4
 
             //moves move_list[1];
 
