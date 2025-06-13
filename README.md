@@ -1,4 +1,4 @@
-# ⚔️ Bitboard Chess Engine
+# ⚔️ SmartChess Engine
 
 A high-performance chess engine written in C++, built from scratch using bitboards, magic bitboards, and advanced search techniques. This project is part of my graduation thesis and is integrated with a mechanical CNC-driven chessboard via Arduino.
 
